@@ -2,26 +2,26 @@ import { useState, useEffect } from 'react';
 
 // ─── TEMA ─────────────────────────────────────────────────────────────────────
 const T = {
-  bg: '#080810',
-  surface: '#0e0e1a',
-  card: '#13131f',
-  border: '#1e1e30',
-  gold: '#c9a84c',
-  goldDim: '#c9a84c18',
-  goldBorder: '#c9a84c30',
-  text: '#f0f0f8',
-  textMuted: '#60607a',
-  textDim: '#3a3a52',
-  green: '#4ade80',
-  greenBg: '#0a1f12',
-  yellow: '#facc15',
-  yellowBg: '#1f1a08',
-  red: '#f87171',
-  redBg: '#1f0808',
-  purple: '#a78bfa',
-  purpleBg: '#120e20',
-  blue: '#38bdf8',
-  blueBg: '#081820',
+  bg: '#f5f5fa',
+  surface: '#ffffff',
+  card: '#ffffff',
+  border: '#e2e2ee',
+  gold: '#a07828',
+  goldDim: '#c9a84c15',
+  goldBorder: '#c9a84c40',
+  text: '#1a1a2e',
+  textMuted: '#5a5a7a',
+  textDim: '#9898b8',
+  green: '#16a34a',
+  greenBg: '#f0fdf4',
+  yellow: '#ca8a04',
+  yellowBg: '#fefce8',
+  red: '#dc2626',
+  redBg: '#fef2f2',
+  purple: '#7c3aed',
+  purpleBg: '#f5f3ff',
+  blue: '#0284c7',
+  blueBg: '#f0f9ff',
 };
 
 // ─── API ──────────────────────────────────────────────────────────────────────
@@ -205,19 +205,39 @@ const INSTRUCOES = {
   exclusivo: 'Crie senso de oportunidade — atenção personalizada, análise completa feita, janela aberta agora. Tom de oportunidade única sem desespero. Valorize o tempo que já dedicou ao caso.',
 };
 
+const FORMATOS = [
+  { id: 'whatsapp', icon: '💬', label: 'WhatsApp', desc: 'Curto e direto, máx 5 linhas' },
+  { id: 'email', icon: '📧', label: 'E-mail', desc: 'Formal, completo, com saudação' },
+  { id: 'ligacao', icon: '📞', label: 'Roteiro de Ligação', desc: 'Script para falar ao telefone' },
+  { id: 'formal', icon: '📋', label: 'Mensagem Formal', desc: 'Profissional para LinkedIn/escritório' },
+];
+
+const P_MENSAGEM_FORMATO = (abordagem, instrucao, formato) => `Você é um advogado trabalhista gerando comunicação para FECHAR CONTRATO.
+ABORDAGEM: ${abordagem} — ${instrucao}
+FORMATO: ${formato === 'whatsapp' ? 'WhatsApp — máximo 5 linhas, tom direto, informal mas profissional' : formato === 'email' ? 'E-mail — com Assunto, saudação formal, corpo de 3-4 parágrafos, despedida' : formato === 'ligacao' ? 'Roteiro de ligação telefônica — com abertura, desenvolvimento e fechamento em tópicos curtos para o advogado falar' : 'Mensagem formal — tom institucional, adequado para LinkedIn ou comunicação de escritório'}
+REGRAS ABSOLUTAS:
+- NUNCA prometer resultado, valor ou êxito (violação EOAB arts. 34 e 39)
+- Citar algo ESPECÍFICO do caso — nunca genérico
+- Terminar sempre com pergunta de fechamento direta
+- Referenciar CLT/TST/CF88 para demonstrar autoridade
+RESPONDA SOMENTE com o JSON (sem markdown):
+{"mensagem_principal":"texto completo aqui","followup_24h":"texto de acompanhamento 24h depois no mesmo formato","por_que_fecha":"razão técnica desta combinação abordagem+formato"}`;
+
 const NC = { forte: T.green, moderado: T.yellow, fraco: T.red };
 const NB = { forte: T.greenBg, moderado: T.yellowBg, fraco: T.redBg };
 
-function ToolLead() {
+function ToolLead({ onSaveCRM }) {
   const [step, setStep] = useState(1);
   const [txt, setTxt] = useState('');
   const [analysis, setAnalysis] = useState(null);
   const [msgs, setMsgs] = useState(null);
   const [ab, setAb] = useState('urgencia');
+  const [fmt, setFmt] = useState('whatsapp');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
   const [arquivo, setArquivo] = useState(null);
   const [nomeArquivo, setNomeArquivo] = useState('');
+  const [savedCRM, setSavedCRM] = useState(false);
 
   const handleArquivo = (e) => {
     const file = e.target.files[0];
@@ -249,14 +269,38 @@ function ToolLead() {
     } catch (e) { setErr(e.message); } finally { setLoading(false); }
   };
 
-  const gerarMsgs = async (abId) => {
+  const gerarMsgs = async (abId, fmtId) => {
     const id = abId || ab;
-    setAb(id); setLoading(true); setErr('');
+    const fid = fmtId || fmt;
+    setAb(id); setFmt(fid); setLoading(true); setErr('');
     try {
       const ctx = `Nome: ${analysis.nome}\nSituação: ${analysis.situacao}\nTempo: ${analysis.tempo_empresa}\nViolações: ${(analysis.violacoes || []).join('; ')}\nFundamentos: ${(analysis.fundamentos || []).slice(0, 3).join('; ')}`;
-      const r = await callClaude(P_MENSAGEM(ABORDAGENS.find((a) => a.id === id)?.label, INSTRUCOES[id]), ctx);
-      setMsgs({ ...r, abId: id }); setStep(3);
+      const r = await callClaude(P_MENSAGEM_FORMATO(ABORDAGENS.find((a) => a.id === id)?.label, INSTRUCOES[id], fid), ctx);
+      setMsgs({ ...r, abId: id, fmtId: fid }); setStep(3);
     } catch (e) { setErr(e.message); } finally { setLoading(false); }
+  };
+
+  const salvarCRM = () => {
+    if (!analysis || savedCRM) return;
+    const novo = {
+      id: Date.now(),
+      nome: analysis.nome !== 'Não informado' ? analysis.nome : 'Lead sem nome',
+      contato: '',
+      caso: (analysis.violacoes || []).slice(0, 2).join(', '),
+      stage: 'novo',
+      vinculo: analysis.situacao,
+      tempo: analysis.tempo_empresa,
+      salario: analysis.salario_estimado,
+      violacoes: (analysis.violacoes || []).join('; '),
+      docs: [], hist: [],
+      createdAt: new Date().toLocaleDateString('pt-BR'),
+    };
+    try {
+      const existing = JSON.parse(localStorage.getItem('lf_leads') || '[]');
+      localStorage.setItem('lf_leads', JSON.stringify([novo, ...existing]));
+      setSavedCRM(true);
+      if (onSaveCRM) onSaveCRM();
+    } catch (e) {}
   };
 
   if (step === 1) return (
@@ -357,9 +401,34 @@ function ToolLead() {
             ))}
           </div>
         </Card>
+
+        <Card style={{ background: T.surface }}>
+          <Lbl>📄 Formato da mensagem</Lbl>
+          <p style={{ color: T.textMuted, fontSize: 12, margin: '0 0 12px', lineHeight: 1.5 }}>Escolha como quer se comunicar com esse lead.</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {FORMATOS.map((f) => (
+              <button key={f.id} onClick={() => setFmt(f.id)}
+                style={{ background: fmt === f.id ? `${T.gold}12` : T.card, border: `1px solid ${fmt === f.id ? T.gold : T.border}`, borderRadius: 9, padding: '10px 12px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}>
+                <div style={{ fontSize: 16, marginBottom: 3 }}>{f.icon}</div>
+                <div style={{ color: fmt === f.id ? T.gold : T.text, fontSize: 12, fontWeight: 700 }}>{f.label}</div>
+                <div style={{ color: T.textMuted, fontSize: 10, marginTop: 2 }}>{f.desc}</div>
+              </button>
+            ))}
+          </div>
+        </Card>
+
+        {/* SALVAR NO CRM */}
+        <button onClick={salvarCRM} disabled={savedCRM}
+          style={{ width: '100%', background: savedCRM ? T.greenBg : T.surface, border: `1px solid ${savedCRM ? T.green : T.border}`, borderRadius: 10, padding: '10px 16px', cursor: savedCRM ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, transition: 'all 0.2s' }}>
+          <span style={{ fontSize: 16 }}>{savedCRM ? '✓' : '📋'}</span>
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ color: savedCRM ? T.green : T.text, fontSize: 13, fontWeight: 600 }}>{savedCRM ? 'Salvo no CRM!' : 'Salvar lead no CRM automaticamente'}</div>
+            <div style={{ color: T.textMuted, fontSize: 11 }}>{savedCRM ? 'Lead adicionado com dados da análise' : 'Preenche nome, caso, violações e situação'}</div>
+          </div>
+        </button>
         <Err msg={err} />
-        <Btn onClick={() => gerarMsgs(ab)} disabled={loading} style={{ width: '100%', padding: 14 }}>
-          {loading ? '⏳ Gerando mensagens...' : `→ Gerar com Abordagem ${ABORDAGENS.find((a) => a.id === ab)?.icon} ${ABORDAGENS.find((a) => a.id === ab)?.label}`}
+        <Btn onClick={() => gerarMsgs(ab, fmt)} disabled={loading} style={{ width: '100%', padding: 14 }}>
+          {loading ? '⏳ Gerando mensagem...' : `→ Gerar ${FORMATOS.find(f=>f.id===fmt)?.icon} ${FORMATOS.find(f=>f.id===fmt)?.label} com tom ${ABORDAGENS.find((a) => a.id === ab)?.icon} ${ABORDAGENS.find((a) => a.id === ab)?.label}`}
         </Btn>
       </div>
     );
@@ -367,11 +436,16 @@ function ToolLead() {
 
   if (step === 3 && msgs) {
     const abObj = ABORDAGENS.find((a) => a.id === msgs.abId);
+    const fmtObj = FORMATOS.find((f) => f.id === msgs.fmtId);
     return (
       <div>
-        <Title sub="Copie e cole direto no WhatsApp.">Mensagens Prontas ✓</Title>
-        {abObj && <InfoBox color={abObj.cor}>{abObj.icon} Abordagem <strong>{abObj.label}</strong> — {abObj.desc}</InfoBox>}
-        {[['MENSAGEM PRINCIPAL', 'mensagem_principal', T.gold], ['FOLLOW-UP 24H', 'followup_24h', T.purple]].map(([lbl, key, cor]) => (
+        <Title sub="Copie e cole no canal escolhido.">Mensagem Pronta ✓</Title>
+        {abObj && fmtObj && (
+          <InfoBox color={abObj.cor}>
+            {fmtObj.icon} <strong>{fmtObj.label}</strong> · tom {abObj.icon} <strong>{abObj.label}</strong> — {abObj.desc}
+          </InfoBox>
+        )}
+        {[['MENSAGEM PRINCIPAL', 'mensagem_principal', T.gold], ['ACOMPANHAMENTO 24H', 'followup_24h', T.purple]].map(([lbl, key, cor]) => (
           <Card key={key} accent={cor}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <Tag color={cor}>{lbl}</Tag>
@@ -381,23 +455,39 @@ function ToolLead() {
           </Card>
         ))}
         <Card style={{ background: T.greenBg, borderColor: `${T.green}25` }}>
-          <Lbl>◆ Por que essa abordagem fecha</Lbl>
-          <p style={{ color: '#8ecfa0', fontSize: 13, margin: 0, lineHeight: 1.7, fontStyle: 'italic' }}>{msgs.por_que_fecha}</p>
+          <Lbl>◆ Por que essa combinação fecha</Lbl>
+          <p style={{ color: T.green, fontSize: 13, margin: 0, lineHeight: 1.7, fontStyle: 'italic' }}>{msgs.por_que_fecha}</p>
         </Card>
         <Card style={{ background: T.surface }}>
-          <Lbl>Testar outra abordagem — mesmo lead</Lbl>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 8 }}>
-            {ABORDAGENS.filter((a) => a.id !== msgs.abId).map((a) => (
-              <button key={a.id} onClick={() => gerarMsgs(a.id)} disabled={loading}
-                style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 7, padding: '6px 12px', color: T.textMuted, fontSize: 12, cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = a.cor; e.currentTarget.style.color = a.cor; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.color = T.textMuted; }}>
-                {a.icon} {a.label}
-              </button>
-            ))}
+          <Lbl>Testar outra combinação — mesmo lead</Lbl>
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 6 }}>Tom:</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {ABORDAGENS.filter((a) => a.id !== msgs.abId).map((a) => (
+                <button key={a.id} onClick={() => gerarMsgs(a.id, msgs.fmtId)} disabled={loading}
+                  style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 7, padding: '5px 10px', color: T.textMuted, fontSize: 11, cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = a.cor; e.currentTarget.style.color = a.cor; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.color = T.textMuted; }}>
+                  {a.icon} {a.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 6 }}>Formato:</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {FORMATOS.filter((f) => f.id !== msgs.fmtId).map((f) => (
+                <button key={f.id} onClick={() => gerarMsgs(msgs.abId, f.id)} disabled={loading}
+                  style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 7, padding: '5px 10px', color: T.textMuted, fontSize: 11, cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.gold; e.currentTarget.style.color = T.gold; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.color = T.textMuted; }}>
+                  {f.icon} {f.label}
+                </button>
+              ))}
+            </div>
           </div>
         </Card>
-        <Btn variant="ghost" onClick={() => { setStep(1); setTxt(''); setAnalysis(null); setMsgs(null); setArquivo(null); setNomeArquivo(''); }} style={{ width: '100%', marginTop: 4 }}>
+        <Btn variant="ghost" onClick={() => { setStep(1); setTxt(''); setAnalysis(null); setMsgs(null); setArquivo(null); setNomeArquivo(''); setSavedCRM(false); }} style={{ width: '100%', marginTop: 4 }}>
           + Analisar novo lead
         </Btn>
       </div>
@@ -1091,6 +1181,8 @@ const TOOLS = [
 
 export default function App() {
   const [active, setActive] = useState('lead');
+  const [crmKey, setCrmKey] = useState(0);
+  const handleSaveCRM = () => setCrmKey(k => k + 1);
   return (
     <div style={{ minHeight: '100vh', background: T.bg, color: T.text, fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column' }}>
       <div style={{ borderBottom: `1px solid ${T.border}`, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 10, background: T.surface, position: 'sticky', top: 0, zIndex: 100 }}>
@@ -1109,8 +1201,8 @@ export default function App() {
         ))}
       </div>
       <div style={{ flex: 1, maxWidth: 700, width: '100%', margin: '0 auto', padding: '28px 18px 60px' }}>
-        {active === 'lead' && <ToolLead />}
-        {active === 'crm' && <ToolCRM />}
+        {active === 'lead' && <ToolLead onSaveCRM={handleSaveCRM} />}
+        {active === 'crm' && <ToolCRM key={crmKey} />}
         {active === 'objecoes' && <ToolObjecoes />}
         {active === 'calc' && <ToolCalc />}
         {active === 'contrato' && <ToolContrato />}
@@ -1120,9 +1212,11 @@ export default function App() {
         *{box-sizing:border-box;}
         input,textarea,select{caret-color:${T.gold};}
         textarea::placeholder,input::placeholder{color:${T.textDim};}
-        ::-webkit-scrollbar{width:3px;height:3px;}
-        ::-webkit-scrollbar-thumb{background:${T.border};border-radius:3px;}
+        ::-webkit-scrollbar{width:4px;height:4px;}
+        ::-webkit-scrollbar-thumb{background:${T.border};border-radius:4px;}
+        ::-webkit-scrollbar-track{background:${T.bg};}
         button:active{opacity:0.75;}
+        select option{background:#fff;color:${T.text};}
       `}</style>
     </div>
   );
