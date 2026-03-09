@@ -226,6 +226,19 @@ RESPONDA SOMENTE com o JSON (sem markdown):
 const NC = { forte: T.green, moderado: T.yellow, fraco: T.red };
 const NB = { forte: T.greenBg, moderado: T.yellowBg, fraco: T.redBg };
 
+function BtnSalvarCRM({ savedCRM, onSave }) {
+  return (
+    <button onClick={onSave} disabled={savedCRM}
+      style={{ width: '100%', background: savedCRM ? T.greenBg : T.surface, border: `1px solid ${savedCRM ? T.green : T.border}`, borderRadius: 10, padding: '10px 16px', cursor: savedCRM ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, transition: 'all 0.2s' }}>
+      <span style={{ fontSize: 16 }}>{savedCRM ? '✓' : '📋'}</span>
+      <div style={{ textAlign: 'left' }}>
+        <div style={{ color: savedCRM ? T.green : T.text, fontSize: 13, fontWeight: 600 }}>{savedCRM ? 'Salvo no CRM!' : 'Salvar lead no CRM'}</div>
+        <div style={{ color: T.textMuted, fontSize: 11 }}>{savedCRM ? 'Lead adicionado com dados da análise' : 'Preenche nome, caso, violações e situação'}</div>
+      </div>
+    </button>
+  );
+}
+
 function ToolLead({ onSaveCRM }) {
   const [step, setStep] = useState(1);
   const [txt, setTxt] = useState('');
@@ -469,15 +482,7 @@ function ToolLead({ onSaveCRM }) {
           </div>
         </Card>
 
-        {/* SALVAR NO CRM */}
-        <button onClick={salvarCRM} disabled={savedCRM}
-          style={{ width: '100%', background: savedCRM ? T.greenBg : T.surface, border: `1px solid ${savedCRM ? T.green : T.border}`, borderRadius: 10, padding: '10px 16px', cursor: savedCRM ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, transition: 'all 0.2s' }}>
-          <span style={{ fontSize: 16 }}>{savedCRM ? '✓' : '📋'}</span>
-          <div style={{ textAlign: 'left' }}>
-            <div style={{ color: savedCRM ? T.green : T.text, fontSize: 13, fontWeight: 600 }}>{savedCRM ? 'Salvo no CRM!' : 'Salvar lead no CRM automaticamente'}</div>
-            <div style={{ color: T.textMuted, fontSize: 11 }}>{savedCRM ? 'Lead adicionado com dados da análise' : 'Preenche nome, caso, violações e situação'}</div>
-          </div>
-        </button>
+        <BtnSalvarCRM savedCRM={savedCRM} onSave={salvarCRM} />
         <Err msg={err} />
         <Btn onClick={() => gerarMsgs(ab, fmt)} disabled={loading} style={{ width: '100%', padding: 14 }}>
           {loading ? '⏳ Gerando mensagem...' : `→ Gerar ${FORMATOS.find(f=>f.id===fmt)?.icon} ${FORMATOS.find(f=>f.id===fmt)?.label} com tom ${ABORDAGENS.find((a) => a.id === ab)?.icon} ${ABORDAGENS.find((a) => a.id === ab)?.label}`}
@@ -510,6 +515,7 @@ function ToolLead({ onSaveCRM }) {
           <Lbl>◆ Por que essa combinação fecha</Lbl>
           <p style={{ color: T.green, fontSize: 13, margin: 0, lineHeight: 1.7, fontStyle: 'italic' }}>{msgs.por_que_fecha}</p>
         </Card>
+        <BtnSalvarCRM savedCRM={savedCRM} onSave={salvarCRM} />
         <Card style={{ background: T.surface }}>
           <Lbl>Testar outra combinação — mesmo lead</Lbl>
           <div style={{ marginBottom: 10 }}>
@@ -557,14 +563,14 @@ function ToolLead({ onSaveCRM }) {
   }
 
   if (step === 4 && analysis) {
-    return <ToolObjecoesLead analysis={analysis} onBack={() => setStep(3)} onNovoLead={() => { setStep(1); setTxt(''); setAnalysis(null); setMsgs(null); setArquivo(null); setNomeArquivo(''); setSavedCRM(false); }} />;
+    return <ToolObjecoesLead analysis={analysis} savedCRM={savedCRM} onSaveCRM={salvarCRM} onBack={() => setStep(3)} onNovoLead={() => { setStep(1); setTxt(''); setAnalysis(null); setMsgs(null); setArquivo(null); setNomeArquivo(''); setSavedCRM(false); }} />;
   }
 
   return null;
 }
 
 // ─── OBJEÇÕES DO LEAD (funil integrado) ───────────────────────────────────────
-function ToolObjecoesLead({ analysis, onBack, onNovoLead }) {
+function ToolObjecoesLead({ analysis, savedCRM, onSaveCRM, onBack, onNovoLead }) {
   const [loading, setLoading] = useState(false);
   const [respostas, setRespostas] = useState(null);
   const [err, setErr] = useState('');
@@ -605,6 +611,7 @@ Retorne SOMENTE JSON no formato:
           <p style={{ color: T.textMuted, fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>
             A IA vai analisar o perfil deste lead e prever as 4 objeções mais prováveis com respostas personalizadas para fechar este caso específico.
           </p>
+          <BtnSalvarCRM savedCRM={savedCRM} onSave={onSaveCRM} />
           <Err msg={err} />
           <Btn onClick={gerar} disabled={loading} style={{ width: '100%', padding: 14 }}>
             {loading ? '⏳ Analisando objeções prováveis...' : '→ Gerar Respostas para Este Lead'}
@@ -628,6 +635,7 @@ Retorne SOMENTE JSON no formato:
               </div>
             </div>
           ))}
+          <BtnSalvarCRM savedCRM={savedCRM} onSave={onSaveCRM} />
           <Btn variant="ghost" onClick={() => setRespostas(null)} style={{ width: '100%', marginBottom: 8 }}>↺ Gerar novamente</Btn>
           <Btn variant="ghost" onClick={onNovoLead} style={{ width: '100%' }}>+ Analisar novo lead</Btn>
         </>
