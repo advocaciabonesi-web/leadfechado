@@ -239,9 +239,61 @@ function ToolLead({ onSaveCRM }) {
   const [nomeArquivo, setNomeArquivo] = useState('');
   const [savedCRM, setSavedCRM] = useState(false);
 
-  const handleArquivo = (e) => {
+  const handleArquivo = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    setErr('');
+
+    // ZIP — exportação do WhatsApp
+    if (file.name.endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed') {
+      try {
+        const JSZipMod = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
+        const JSZip = JSZipMod.default || JSZipMod;
+        const zip = await JSZip.loadAsync(file);
+        let textoConversa = '';
+        const arquivosAudio = [];
+        for (const [nome, entry] of Object.entries(zip.files)) {
+          if (!entry.dir) {
+            if (nome.endsWith('.txt')) {
+              textoConversa = await entry.async('string');
+            } else if (nome.match(/\.(mp4|m4a|opus|ogg|aac|mp3)$/i)) {
+              arquivosAudio.push(nome);
+            }
+          }
+        }
+        if (textoConversa) {
+          setTxt(textoConversa.slice(0, 8000));
+          setNomeArquivo(file.name + ' ✓ conversa extraída');
+          setArquivo(null);
+          if (arquivosAudio.length > 0) {
+            setErr('✓ Conversa extraída! ' + arquivosAudio.length + ' áudio(s) encontrado(s) — transcrição automática em breve.');
+          }
+        } else {
+          setErr('Nenhum texto encontrado no ZIP. Confirme se é exportação do WhatsApp.');
+        }
+      } catch (zipErr) {
+        setErr('Erro ao abrir o ZIP. Extraia manualmente e cole o texto aqui.');
+      }
+      return;
+    }
+
+    // TXT simples
+    if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+      const reader = new FileReader();
+      reader.onload = () => { setTxt(reader.result.slice(0, 8000)); setNomeArquivo(file.name); setArquivo(null); };
+      reader.readAsText(file, 'UTF-8');
+      return;
+    }
+
+    // Áudio avulso do WhatsApp
+    if (file.type.startsWith('audio/') || file.name.match(/\.(mp4|m4a|opus|ogg|aac|mp3)$/i)) {
+      setNomeArquivo(file.name + ' (áudio — cole a transcrição abaixo)');
+      setArquivo(null);
+      setErr('Áudio recebido! Cole a transcrição manualmente no campo acima. Transcrição automática chegará em breve.');
+      return;
+    }
+
+    // PDF ou imagem — comportamento original
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = reader.result.split(',')[1];
@@ -252,7 +304,7 @@ function ToolLead({ onSaveCRM }) {
       } else if (isImg) {
         setArquivo({ type: 'image', source: { type: 'base64', media_type: file.type, data: base64 } });
       } else {
-        setErr('Use PDF ou imagem (JPG, PNG).');
+        setErr('Formato não suportado. Use PDF, imagem, TXT ou ZIP do WhatsApp.');
         return;
       }
       setNomeArquivo(file.name);
@@ -315,14 +367,14 @@ function ToolLead({ onSaveCRM }) {
 
       {/* ANEXO */}
       <label style={{ display: 'flex', alignItems: 'center', gap: 10, background: nomeArquivo ? T.greenBg : T.surface, border: `1px solid ${nomeArquivo ? T.green : T.border}`, borderRadius: 10, padding: '12px 16px', cursor: 'pointer', marginBottom: 14, transition: 'all 0.2s' }}>
-        <input type="file" accept=".pdf,image/*" onChange={handleArquivo} style={{ display: 'none' }} />
+        <input type="file" accept=".pdf,.zip,.txt,.mp4,.m4a,.opus,.ogg,.aac,.mp3,image/*" onChange={handleArquivo} style={{ display: 'none' }} />
         <span style={{ fontSize: 18 }}>{nomeArquivo ? '✓' : '📎'}</span>
         <div>
           <div style={{ color: nomeArquivo ? T.green : T.text, fontSize: 13, fontWeight: 600 }}>
-            {nomeArquivo || 'Anexar arquivo — PDF ou imagem'}
+            {nomeArquivo || 'Anexar arquivo — PDF, imagem ou ZIP do WhatsApp'}
           </div>
           <div style={{ color: T.textMuted, fontSize: 11, marginTop: 2 }}>
-            {nomeArquivo ? 'Arquivo pronto para análise' : 'Print de conversa, documento, formulário...'}
+            {nomeArquivo ? 'Arquivo pronto para análise' : 'ZIP do WhatsApp, PDF, print, áudio (.mp4/.opus/.m4a)...'}
           </div>
         </div>
         {nomeArquivo && (
@@ -487,13 +539,101 @@ function ToolLead({ onSaveCRM }) {
             </div>
           </div>
         </Card>
+        {/* FUNIL — PRÓXIMA ETAPA: OBJEÇÕES */}
+        <div style={{ background: T.surface, border: `1px solid ${T.goldBorder}`, borderRadius: 12, padding: '16px 18px', marginTop: 8 }}>
+          <div style={{ fontSize: 11, color: T.gold, fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 10 }}>◆ PRÓXIMA ETAPA DO FUNIL</div>
+          <p style={{ color: T.textMuted, fontSize: 12, margin: '0 0 12px', lineHeight: 1.5 }}>
+            O cliente vai levantar objeções. Antecipe com respostas prontas baseadas no perfil deste lead.
+          </p>
+          <Btn onClick={() => setStep(4)} style={{ width: '100%', padding: 12 }}>
+            🛡️ Gerar Respostas para Objeções deste Lead →
+          </Btn>
+        </div>
         <Btn variant="ghost" onClick={() => { setStep(1); setTxt(''); setAnalysis(null); setMsgs(null); setArquivo(null); setNomeArquivo(''); setSavedCRM(false); }} style={{ width: '100%', marginTop: 4 }}>
           + Analisar novo lead
         </Btn>
       </div>
     );
   }
+
+  if (step === 4 && analysis) {
+    return <ToolObjecoesLead analysis={analysis} onBack={() => setStep(3)} onNovoLead={() => { setStep(1); setTxt(''); setAnalysis(null); setMsgs(null); setArquivo(null); setNomeArquivo(''); setSavedCRM(false); }} />;
+  }
+
   return null;
+}
+
+// ─── OBJEÇÕES DO LEAD (funil integrado) ───────────────────────────────────────
+function ToolObjecoesLead({ analysis, onBack, onNovoLead }) {
+  const [loading, setLoading] = useState(false);
+  const [respostas, setRespostas] = useState(null);
+  const [err, setErr] = useState('');
+
+  const gerar = async () => {
+    setLoading(true); setErr('');
+    try {
+      const ctx = `Lead: ${analysis.nome || 'Não informado'}
+Situação: ${analysis.situacao || ''}
+Tempo de empresa: ${analysis.tempo_empresa || ''}
+Violações: ${(analysis.violacoes || []).join(', ')}
+Nível do caso: ${analysis.nivel || ''}
+Salário estimado: ${analysis.salario_estimado || ''}`;
+
+      const prompt = `Você é um advogado trabalhista expert em fechamento de contratos. Com base no perfil do lead abaixo, gere as 4 objeções MAIS PROVÁVEIS que esse cliente específico vai levantar e a resposta ideal para cada uma. Respeite o EOAB: sem prometer resultados ou valores, sem captação explícita.
+
+Retorne SOMENTE JSON no formato:
+{"objecoes":[{"objecao":"texto da objeção","resposta":"resposta ideal empática e jurídica","por_que_funciona":"explicação de 1 linha"}]}`;
+
+      const r = await callClaude(prompt, ctx, 2000);
+      setRespostas(r.objecoes || []);
+    } catch (e) { setErr(e.message); } finally { setLoading(false); }
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+        <button onClick={onBack} style={{ background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 7, padding: '6px 12px', color: T.textMuted, fontSize: 12, cursor: 'pointer' }}>← Voltar</button>
+        <Title sub="Objeções prováveis deste lead específico com respostas prontas.">🛡️ Objeções do Lead</Title>
+      </div>
+      <div style={{ background: T.goldDim, border: `1px solid ${T.goldBorder}`, borderRadius: 10, padding: '12px 16px', marginBottom: 16 }}>
+        <div style={{ fontSize: 11, color: T.gold, fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 4 }}>LEAD ANALISADO</div>
+        <div style={{ fontSize: 13, color: T.text, fontWeight: 600 }}>{analysis.nome || 'Sem nome'}</div>
+        <div style={{ fontSize: 12, color: T.textMuted }}>{analysis.situacao} · {analysis.tempo_empresa}</div>
+      </div>
+      {!respostas ? (
+        <>
+          <p style={{ color: T.textMuted, fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>
+            A IA vai analisar o perfil deste lead e prever as 4 objeções mais prováveis com respostas personalizadas para fechar este caso específico.
+          </p>
+          <Err msg={err} />
+          <Btn onClick={gerar} disabled={loading} style={{ width: '100%', padding: 14 }}>
+            {loading ? '⏳ Analisando objeções prováveis...' : '→ Gerar Respostas para Este Lead'}
+          </Btn>
+        </>
+      ) : (
+        <>
+          {respostas.map((item, i) => (
+            <div key={i} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: '16px 18px', marginBottom: 12 }}>
+              <div style={{ background: T.redBg, border: `1px solid ${T.red}20`, borderRadius: 7, padding: '8px 12px', marginBottom: 12 }}>
+                <div style={{ fontSize: 10, color: T.red, fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 3 }}>OBJEÇÃO {i + 1}</div>
+                <div style={{ color: T.red, fontSize: 13, fontWeight: 600, fontStyle: 'italic' }}>"{item.objecao}"</div>
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 10, color: T.gold, fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 6 }}>RESPOSTA IDEAL</div>
+                <p style={{ color: T.text, fontSize: 13, lineHeight: 1.7, margin: 0, fontFamily: 'Georgia,serif' }}>{item.resposta}</p>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: 11, color: T.green, fontStyle: 'italic' }}>◆ {item.por_que_funciona}</div>
+                <CopyBtn text={item.resposta} />
+              </div>
+            </div>
+          ))}
+          <Btn variant="ghost" onClick={() => setRespostas(null)} style={{ width: '100%', marginBottom: 8 }}>↺ Gerar novamente</Btn>
+          <Btn variant="ghost" onClick={onNovoLead} style={{ width: '100%' }}>+ Analisar novo lead</Btn>
+        </>
+      )}
+    </div>
+  );
 }
 
 // ─── 2. CRM ───────────────────────────────────────────────────────────────────
@@ -906,7 +1046,37 @@ function ToolContrato() {
   const [contrato, setContrato] = useState('');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
+  const [modeloProprio, setModeloProprio] = useState('');
+  const [nomeModelo, setNomeModelo] = useState('');
   const up = (k, v) => setF((x) => ({ ...x, [k]: v }));
+
+  const handleModelo = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+      const reader = new FileReader();
+      reader.onload = () => { setModeloProprio(reader.result.slice(0, 6000)); setNomeModelo(file.name); };
+      reader.readAsText(file, 'UTF-8');
+    } else {
+      // Para .docx, extrai o texto bruto como fallback
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const text = reader.result;
+          // tenta extrair texto legível do docx (xml dentro do zip)
+          const match = text.match(/<w:t[^>]*>([^<]+)<\/w:t>/g);
+          if (match) {
+            const extracted = match.map(m => m.replace(/<[^>]+>/g, '')).join(' ');
+            setModeloProprio(extracted.slice(0, 6000));
+            setNomeModelo(file.name + ' (texto extraído)');
+          } else {
+            setNomeModelo(file.name + ' — use .txt para melhor resultado');
+          }
+        } catch(_) { setNomeModelo(file.name + ' — use .txt para melhor resultado'); }
+      };
+      reader.readAsText(file);
+    }
+  };
 
   const gerar = async () => {
     if (!f.cliente || !f.caso) { setErr('Preencha nome do cliente e descrição do caso.'); return; }
@@ -918,7 +1088,15 @@ CIDADE: ${f.cidade || '[Cidade]'}
 OBJETO/CASO: ${f.caso}
 HONORÁRIOS: ${f.tipo === 'exito' ? `${f.percentual || 30}% sobre o valor da condenação (êxito)` : f.tipo === 'fixo' ? `R$ ${f.honorarios} fixo` : f.tipo === 'misto' ? `R$ ${f.honorarios} entrada + ${f.percentual || 20}% êxito` : 'Honorários a combinar'}
 DATA: ${new Date().toLocaleDateString('pt-BR')}`;
-      const r = await callClaude(P_CONTRATO, ctx, 2000);
+      const promptBase = modeloProprio
+        ? `Você é um assistente jurídico. Use o MODELO DE CONTRATO FORNECIDO pelo advogado como base estrutural e estilo, substituindo apenas as variáveis com os dados abaixo. Mantenha a linguagem, cláusulas e formatação do modelo original. Respeite o EOAB e OAB Lei 8.906/94.
+
+MODELO DO ADVOGADO:
+${modeloProprio}
+
+Retorne SOMENTE JSON: {"contrato":"texto integral com \n para quebras de linha"}`
+        : P_CONTRATO;
+      const r = await callClaude(promptBase, ctx, 2500);
       setContrato((r.contrato || '').replace(/\\n/g, '\n'));
     } catch (e) { setErr(e.message); } finally { setLoading(false); }
   };
@@ -950,8 +1128,21 @@ DATA: ${new Date().toLocaleDateString('pt-BR')}`;
             </div>
             {f.tipo === 'misto' && <div><Lbl>Valor entrada (R$)</Lbl><input value={f.honorarios} onChange={(e) => up('honorarios', e.target.value)} placeholder="ex: 500" type="number" style={inp} /></div>}
           </div>
+          {/* MODELO PRÓPRIO */}
+          <div style={{ gridColumn: '1/-1' }}>
+            <Lbl>Modelo próprio (opcional)</Lbl>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, background: nomeModelo ? T.greenBg : T.surface, border: `1px solid ${nomeModelo ? T.green : T.border}`, borderRadius: 9, padding: '11px 14px', cursor: 'pointer', transition: 'all 0.2s' }}>
+              <input type="file" accept=".txt,.docx,.doc" onChange={handleModelo} style={{ display: 'none' }} />
+              <span style={{ fontSize: 16 }}>{nomeModelo ? '✓' : '📋'}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ color: nomeModelo ? T.green : T.text, fontSize: 12, fontWeight: 600 }}>{nomeModelo || 'Usar meu modelo de contrato (.txt ou .docx)'}</div>
+                <div style={{ color: T.textMuted, fontSize: 11, marginTop: 2 }}>{nomeModelo ? 'IA vai usar seu modelo como base' : 'Se não enviar, usa o modelo padrão FECHA CONTRATO'}</div>
+              </div>
+              {nomeModelo && <button onClick={(e) => { e.preventDefault(); setModeloProprio(''); setNomeModelo(''); }} style={{ background: 'transparent', border: 'none', color: T.red, fontSize: 14, cursor: 'pointer' }}>✕</button>}
+            </label>
+          </div>
           <Err msg={err} />
-          <Btn onClick={gerar} disabled={loading} style={{ width: '100%', padding: 13 }}>{loading ? '⏳ Gerando contrato completo...' : '→ Gerar Contrato de Honorários'}</Btn>
+          <Btn onClick={gerar} disabled={loading} style={{ width: '100%', padding: 13 }}>{loading ? '⏳ Gerando contrato...' : nomeModelo ? '→ Gerar com Meu Modelo' : '→ Gerar Contrato de Honorários'}</Btn>
         </Card>
       ) : (
         <>
@@ -991,6 +1182,13 @@ function ToolPresenca() {
   const [cidadeAnuncio, setCidadeAnuncio] = useState('');
   const [nomeEx, setNomeEx] = useState('');
   const [casoEx, setCasoEx] = useState('');
+  // estados do gerador de imagens
+  const [imgTema, setImgTema] = useState('');
+  const [imgTemaCustom, setImgTemaCustom] = useState('');
+  const [imgEstilo, setImgEstilo] = useState('educativo');
+  const [imgNome, setImgNome] = useState('');
+  const [imgFormato, setImgFormato] = useState('feed');
+  const [imgPost, setImgPost] = useState(null);
   const reset = () => { setRes(null); setErr(''); };
 
   const gerarConteudo = async () => {
@@ -1025,12 +1223,13 @@ function ToolPresenca() {
     { id: 'conteudo', icon: '✍️', label: 'Conteúdo', desc: 'Post educativo para redes sociais' },
     { id: 'anuncio', icon: '📢', label: 'Anúncio', desc: 'Google Ads ou Meta Ads' },
     { id: 'indicacao', icon: '🤝', label: 'Indicação', desc: 'Reativar ex-clientes' },
+    { id: 'imagem', icon: '🖼️', label: 'Imagem IA', desc: 'Posts e stories prontos' },
   ];
 
   return (
     <div>
       <Title sub="Apareça onde seu cliente está. Conteúdo educativo, anúncio e indicação — tudo dentro do EOAB.">📣 Presença Digital</Title>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 9, marginBottom: 22 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 9, marginBottom: 22 }}>
         {mods.map((m) => (
           <button key={m.id} onClick={() => { setMod(m.id); reset(); }}
             style={{ background: mod === m.id ? T.goldDim : T.card, border: `1px solid ${mod === m.id ? T.gold : T.border}`, borderRadius: 11, padding: '13px 8px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s' }}>
@@ -1165,18 +1364,397 @@ function ToolPresenca() {
           <Btn variant="ghost" onClick={reset} style={{ width: '100%' }}>+ Outro cliente</Btn>
         </>
       )}
+
+      {/* ── GERADOR DE IMAGENS IA ── */}
+      {mod === 'imagem' && !imgPost && (
+        <Card>
+          <Lbl>Tema do post</Lbl>
+          <select value={imgTema} onChange={e => setImgTema(e.target.value)} style={{ ...sel, marginBottom: 10 }}>
+            <option value="">Selecione o tema...</option>
+            {[...TEMAS_IMG, 'Outro...'].map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+          {imgTema === 'Outro...' && (
+            <input value={imgTemaCustom} onChange={e => setImgTemaCustom(e.target.value)} placeholder="Digite o tema..." style={{ ...inp, marginBottom: 10 }} />
+          )}
+          <Lbl style={{ marginTop: 10 }}>Estilo</Lbl>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
+            {ESTILOS_IMG.map(e => (
+              <button key={e.id} onClick={() => setImgEstilo(e.id)}
+                style={{ background: imgEstilo === e.id ? T.goldDim : T.card, border: `1px solid ${imgEstilo === e.id ? T.gold : T.border}`, borderRadius: 9, padding: '10px 12px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}>
+                <div style={{ color: imgEstilo === e.id ? T.gold : T.text, fontSize: 12, fontWeight: 700 }}>{e.label}</div>
+                <div style={{ color: T.textMuted, fontSize: 10, marginTop: 2 }}>{e.desc}</div>
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+            <div><Lbl>Seu nome</Lbl><input value={imgNome} onChange={e => setImgNome(e.target.value)} placeholder="Dr(a). Seu Nome" style={inp} /></div>
+            <div><Lbl>Formato</Lbl>
+              <select value={imgFormato} onChange={e => setImgFormato(e.target.value)} style={sel}>
+                <option value="feed">📷 Feed (1:1)</option>
+                <option value="story">📱 Story (9:16)</option>
+              </select>
+            </div>
+          </div>
+          <Err msg={err} />
+          <Btn onClick={async () => {
+            const t = imgTema === 'Outro...' ? imgTemaCustom : imgTema;
+            if (!t) { setErr('Escolha ou digite um tema.'); return; }
+            setErr(''); setLoading(true);
+            try {
+              const estiloObj = ESTILOS_IMG.find(e => e.id === imgEstilo);
+              const prompt = `Você é especialista em comunicação jurídica para redes sociais. Crie post para Instagram de advogado trabalhista. Siga o EOAB: sem prometer resultados, tom educativo.\n\nTema: ${t}\nEstilo: ${estiloObj.label} — ${estiloObj.desc}\nNome: ${imgNome || 'Dr. Advogado'}\nFormato: ${imgFormato === 'feed' ? 'Feed quadrado' : 'Story vertical'}\n\nRetorne SOMENTE JSON: {"titulo":"max 6 palavras","subtitulo":"max 10 palavras","corpo":"2-3 linhas educativas","cta":"max 8 palavras sem prometer resultado","hashtags":["t1","t2","t3","t4","t5"],"cor_fundo":"hex escuro ex #0a1628","cor_destaque":"hex ex #c9a84c","emoji_principal":"1 emoji"}`;
+              const r = await callClaude(prompt, t, 1000);
+              setImgPost(r);
+            } catch(e) { setErr(e.message); } finally { setLoading(false); }
+          }} disabled={loading} style={{ width: '100%', padding: 14 }}>
+            {loading ? '⏳ Gerando post...' : '→ Gerar Imagem do Post'}
+          </Btn>
+        </Card>
+      )}
+      {mod === 'imagem' && imgPost && (() => {
+        setTimeout(() => desenharCanvasPresenca(imgPost, imgFormato, imgNome), 80);
+        const downloadPost = () => {
+          const c = document.getElementById('postCanvasPresenca');
+          if (!c) return;
+          const a = document.createElement('a');
+          a.download = 'post-instagram.png';
+          a.href = c.toDataURL('image/png');
+          a.click();
+        };
+        return (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Tag color={T.green}>POST GERADO</Tag>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={downloadPost} style={{ background: T.goldDim, border: `1px solid ${T.goldBorder}`, color: T.gold, borderRadius: 7, padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>⬇ Baixar PNG</button>
+                <Btn variant="ghost" onClick={() => setImgPost(null)} style={{ padding: '6px 12px', fontSize: 11 }}>Novo</Btn>
+              </div>
+            </div>
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <canvas id="postCanvasPresenca" style={{ maxWidth: '100%', borderRadius: 12, boxShadow: '0 4px 24px #00000040' }} />
+            </div>
+            <Card style={{ background: T.surface }}>
+              <Lbl>Texto gerado</Lbl>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[['Título', imgPost.titulo],['Subtítulo', imgPost.subtitulo],['Corpo', imgPost.corpo],['CTA', imgPost.cta]].map(([k,v]) => (
+                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                    <div><span style={{ fontSize: 10, color: T.textDim, fontFamily: 'monospace' }}>{k}: </span><span style={{ fontSize: 12, color: T.text }}>{v}</span></div>
+                    <CopyBtn text={v} />
+                  </div>
+                ))}
+                <div><span style={{ fontSize: 10, color: T.textDim, fontFamily: 'monospace' }}>Hashtags: </span><span style={{ fontSize: 12, color: T.blue }}>{(imgPost.hashtags || []).map(h => '#'+h).join(' ')}</span></div>
+              </div>
+            </Card>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+// ─── BLOCO IMAGEM DENTRO DE PRESENÇA (referenciado no mod imagem de ToolPresenca) ─
+// Funções auxiliares de canvas usadas por ToolPresenca no mod imagem
+function desenharCanvasPresenca(post, formato, nome) {
+  const canvas = document.getElementById('postCanvasPresenca');
+  if (!canvas || !post) return;
+  const size = 600;
+  const height = formato === 'feed' ? 600 : 1067;
+  canvas.width = size;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, size, height);
+  grad.addColorStop(0, post.cor_fundo || '#0a1628');
+  grad.addColorStop(1, '#060d1a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, height);
+  const barGrad = ctx.createLinearGradient(0, 0, size, 0);
+  barGrad.addColorStop(0, 'transparent');
+  barGrad.addColorStop(0.5, post.cor_destaque || '#c9a84c');
+  barGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = barGrad;
+  ctx.fillRect(0, 0, size, 4);
+  ctx.font = formato === 'feed' ? '80px serif' : '100px serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(post.emoji_principal || '⚖️', size/2, formato === 'feed' ? 120 : 160);
+  ctx.fillStyle = post.cor_destaque || '#c9a84c';
+  ctx.font = `bold ${formato === 'feed' ? '36px' : '42px'} Arial`;
+  wrapCanvasText(ctx, (post.titulo || '').toUpperCase(), size/2, formato === 'feed' ? 190 : 290, size - 80, formato === 'feed' ? 42 : 50);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `${formato === 'feed' ? '18px' : '22px'} Arial`;
+  wrapCanvasText(ctx, post.subtitulo || '', size/2, formato === 'feed' ? 260 : 390, size - 100, formato === 'feed' ? 26 : 30);
+  const lineY = formato === 'feed' ? 295 : 440;
+  ctx.strokeStyle = (post.cor_destaque || '#c9a84c') + '66';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(60, lineY); ctx.lineTo(size - 60, lineY); ctx.stroke();
+  ctx.fillStyle = '#c8d8ee';
+  ctx.font = `${formato === 'feed' ? '15px' : '18px'} Arial`;
+  wrapCanvasText(ctx, post.corpo || '', size/2, formato === 'feed' ? 330 : 490, size - 80, formato === 'feed' ? 22 : 28);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `bold ${formato === 'feed' ? '14px' : '17px'} Arial`;
+  ctx.fillText('👉 ' + (post.cta || ''), size/2, formato === 'feed' ? 440 : 700);
+  ctx.fillStyle = post.cor_destaque || '#c9a84c';
+  ctx.font = `bold ${formato === 'feed' ? '13px' : '16px'} Arial`;
+  ctx.fillText(nome || 'Dr. Advogado', size/2, formato === 'feed' ? 490 : 800);
+  ctx.fillStyle = '#3a5a7a';
+  ctx.font = `${formato === 'feed' ? '10px' : '13px'} Arial`;
+  ctx.fillText((post.hashtags || []).map(h => '#' + h).join(' '), size/2, formato === 'feed' ? 520 : 860);
+  ctx.fillStyle = barGrad;
+  ctx.fillRect(0, height - 4, size, 4);
+}
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = (text || '').split(' ');
+  let line = '', cy = y;
+  for (let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + ' ';
+    if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+      ctx.fillText(line, x, cy); line = words[n] + ' '; cy += lineHeight;
+    } else { line = testLine; }
+  }
+  ctx.fillText(line, x, cy);
+}
+
+// ─── 7. GERADOR DE IMAGENS ───────────────────────────────────────────────────
+const TEMAS_IMG = [
+  'Demissão sem justa causa', 'Horas extras não pagas', 'Assédio moral',
+  'FGTS não depositado', 'Trabalho sem carteira assinada', 'Acidente de trabalho',
+  'Rescisão indireta', 'Equiparação salarial', 'Seus direitos trabalhistas',
+];
+
+const ESTILOS_IMG = [
+  { id: 'educativo', label: '📚 Educativo', desc: 'Explica um direito trabalhista' },
+  { id: 'alerta', label: '⚠️ Alerta', desc: 'Chama atenção para um risco' },
+  { id: 'motivacional', label: '💪 Motivacional', desc: 'Encoraja a buscar direitos' },
+  { id: 'pergunta', label: '❓ Pergunta', desc: 'Engaja com uma dúvida comum' },
+];
+
+function ToolImagens() {
+  const [tema, setTema] = useState('');
+  const [temaCustom, setTemaCustom] = useState('');
+  const [estilo, setEstilo] = useState('educativo');
+  const [nome, setNome] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+  const [post, setPost] = useState(null);
+  const [formato, setFormato] = useState('feed');
+
+  const gerar = async () => {
+    const t = tema === 'Outro...' ? temaCustom : tema;
+    if (!t) { setErr('Escolha ou digite um tema.'); return; }
+    setErr(''); setLoading(true);
+    try {
+      const estiloObj = ESTILOS_IMG.find(e => e.id === estilo);
+      const prompt = `Você é um especialista em comunicação jurídica para redes sociais. Crie o texto para um post de Instagram de advogado trabalhista. Siga o EOAB: sem prometer resultados, sem captação explícita, tom educativo e informativo.
+
+Tema: ${t}
+Estilo: ${estiloObj.label} — ${estiloObj.desc}
+Nome do advogado: ${nome || 'Dr. Advogado'}
+Formato: ${formato === 'feed' ? 'Post quadrado (feed)' : 'Story vertical'}
+
+Retorne SOMENTE JSON:
+{
+  "titulo": "título impactante (max 6 palavras)",
+  "subtitulo": "subtítulo (max 10 palavras)",
+  "corpo": "texto principal (2-3 linhas, direto e educativo)",
+  "cta": "chamada para ação (max 8 palavras, sem prometer resultado)",
+  "hashtags": ["tag1","tag2","tag3","tag4","tag5"],
+  "cor_fundo": "código hex escuro ex: #0a1628",
+  "cor_destaque": "código hex dourado ou vibrante ex: #c9a84c",
+  "emoji_principal": "1 emoji que representa o tema"
+}`;
+      const r = await callClaude(prompt, t, 1000);
+      setPost(r);
+    } catch(e) { setErr(e.message); } finally { setLoading(false); }
+  };
+
+  const downloadPost = () => {
+    const canvas = document.getElementById('postCanvas');
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.download = 'post-instagram.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+
+  const desenharCanvas = (p) => {
+    const canvas = document.getElementById('postCanvas');
+    if (!canvas || !p) return;
+    const size = formato === 'feed' ? 600 : 600;
+    const height = formato === 'feed' ? 600 : 1067;
+    canvas.width = size;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+
+    // Fundo
+    const grad = ctx.createLinearGradient(0, 0, size, height);
+    grad.addColorStop(0, p.cor_fundo || '#0a1628');
+    grad.addColorStop(1, '#060d1a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, height);
+
+    // Barra topo
+    const barGrad = ctx.createLinearGradient(0, 0, size, 0);
+    barGrad.addColorStop(0, 'transparent');
+    barGrad.addColorStop(0.5, p.cor_destaque || '#c9a84c');
+    barGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = barGrad;
+    ctx.fillRect(0, 0, size, 4);
+
+    // Emoji principal
+    ctx.font = formato === 'feed' ? '80px serif' : '100px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(p.emoji_principal || '⚖️', size/2, formato === 'feed' ? 120 : 160);
+
+    // Título
+    ctx.fillStyle = p.cor_destaque || '#c9a84c';
+    ctx.font = `bold ${formato === 'feed' ? '36px' : '42px'} Arial`;
+    ctx.textAlign = 'center';
+    const titleY = formato === 'feed' ? 190 : 290;
+    wrapText(ctx, (p.titulo || '').toUpperCase(), size/2, titleY, size - 80, formato === 'feed' ? 42 : 50);
+
+    // Subtítulo
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `${formato === 'feed' ? '18px' : '22px'} Arial`;
+    const subY = formato === 'feed' ? 260 : 390;
+    wrapText(ctx, p.subtitulo || '', size/2, subY, size - 100, formato === 'feed' ? 26 : 30);
+
+    // Linha separadora
+    const lineY = formato === 'feed' ? 295 : 440;
+    ctx.strokeStyle = (p.cor_destaque || '#c9a84c') + '66';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(60, lineY);
+    ctx.lineTo(size - 60, lineY);
+    ctx.stroke();
+
+    // Corpo
+    ctx.fillStyle = '#c8d8ee';
+    ctx.font = `${formato === 'feed' ? '15px' : '18px'} Arial`;
+    const bodyY = formato === 'feed' ? 330 : 490;
+    wrapText(ctx, p.corpo || '', size/2, bodyY, size - 80, formato === 'feed' ? 22 : 28);
+
+    // CTA
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold ${formato === 'feed' ? '14px' : '17px'} Arial`;
+    const ctaY = formato === 'feed' ? 440 : 700;
+    ctx.fillText('👉 ' + (p.cta || ''), size/2, ctaY);
+
+    // Nome advogado
+    ctx.fillStyle = p.cor_destaque || '#c9a84c';
+    ctx.font = `bold ${formato === 'feed' ? '13px' : '16px'} Arial`;
+    const nomeY = formato === 'feed' ? 490 : 800;
+    ctx.fillText(nome || 'Dr. Advogado', size/2, nomeY);
+
+    // Hashtags
+    ctx.fillStyle = '#3a5a7a';
+    ctx.font = `${formato === 'feed' ? '10px' : '13px'} Arial`;
+    const hashY = formato === 'feed' ? 520 : 860;
+    ctx.fillText((p.hashtags || []).map(h => '#' + h).join(' '), size/2, hashY);
+
+    // Barra bottom
+    ctx.fillStyle = barGrad;
+    ctx.fillRect(0, height - 4, size, 4);
+  };
+
+  function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+    const words = (text || '').split(' ');
+    let line = '';
+    let cy = y;
+    for (let n = 0; n < words.length; n++) {
+      const testLine = line + words[n] + ' ';
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && n > 0) {
+        ctx.fillText(line, x, cy);
+        line = words[n] + ' ';
+        cy += lineHeight;
+      } else {
+        line = testLine;
+      }
+    }
+    ctx.fillText(line, x, cy);
+  }
+
+  if (post) {
+    setTimeout(() => desenharCanvas(post), 50);
+  }
+
+  return (
+    <div>
+      <Title sub="Gere imagens prontas para Instagram e Stories — sem precisar de designer.">🖼️ Gerador de Imagens IA</Title>
+      {!post ? (
+        <Card>
+          <Lbl>Tema do post</Lbl>
+          <select value={tema} onChange={e => setTema(e.target.value)} style={{ ...sel, marginBottom: 10 }}>
+            <option value="">Selecione o tema...</option>
+            {[...TEMAS_IMG, 'Outro...'].map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+          {tema === 'Outro...' && (
+            <input value={temaCustom} onChange={e => setTemaCustom(e.target.value)} placeholder="Digite o tema..." style={{ ...inp, marginBottom: 10 }} />
+          )}
+          <Lbl style={{ marginTop: 10 }}>Estilo</Lbl>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
+            {ESTILOS_IMG.map(e => (
+              <button key={e.id} onClick={() => setEstilo(e.id)}
+                style={{ background: estilo === e.id ? T.goldDim : T.card, border: `1px solid ${estilo === e.id ? T.gold : T.border}`, borderRadius: 9, padding: '10px 12px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}>
+                <div style={{ color: estilo === e.id ? T.gold : T.text, fontSize: 12, fontWeight: 700 }}>{e.label}</div>
+                <div style={{ color: T.textMuted, fontSize: 10, marginTop: 2 }}>{e.desc}</div>
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+            <div>
+              <Lbl>Seu nome</Lbl>
+              <input value={nome} onChange={e => setNome(e.target.value)} placeholder="Dr(a). Seu Nome" style={inp} />
+            </div>
+            <div>
+              <Lbl>Formato</Lbl>
+              <select value={formato} onChange={e => setFormato(e.target.value)} style={sel}>
+                <option value="feed">📷 Feed (1:1)</option>
+                <option value="story">📱 Story (9:16)</option>
+              </select>
+            </div>
+          </div>
+          <Err msg={err} />
+          <Btn onClick={gerar} disabled={loading} style={{ width: '100%', padding: 14 }}>
+            {loading ? '⏳ Gerando post...' : '→ Gerar Imagem do Post'}
+          </Btn>
+        </Card>
+      ) : (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <Tag color={T.green}>POST GERADO</Tag>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={downloadPost} style={{ background: T.goldDim, border: `1px solid ${T.goldBorder}`, color: T.gold, borderRadius: 7, padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>⬇ Baixar PNG</button>
+              <Btn variant="ghost" onClick={() => setPost(null)} style={{ padding: '6px 12px', fontSize: 11 }}>Novo</Btn>
+            </div>
+          </div>
+          <div style={{ textAlign: 'center', marginBottom: 16 }}>
+            <canvas id="postCanvas" style={{ maxWidth: '100%', borderRadius: 12, boxShadow: `0 4px 24px #00000040` }} />
+          </div>
+          <Card style={{ background: T.surface }}>
+            <Lbl>Texto gerado</Lbl>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[['Título', post.titulo], ['Subtítulo', post.subtitulo], ['Corpo', post.corpo], ['CTA', post.cta]].map(([k, v]) => (
+                <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                  <div><span style={{ fontSize: 10, color: T.textDim, fontFamily: 'monospace' }}>{k}: </span><span style={{ fontSize: 12, color: T.text }}>{v}</span></div>
+                  <CopyBtn text={v} />
+                </div>
+              ))}
+              <div><span style={{ fontSize: 10, color: T.textDim, fontFamily: 'monospace' }}>Hashtags: </span><span style={{ fontSize: 12, color: T.blue }}>{(post.hashtags || []).map(h => '#' + h).join(' ')}</span></div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
 const TOOLS = [
-  { id: 'lead', icon: '⚡', label: 'Analisar Lead', sub: 'IA jurídica + fechamento' },
-  { id: 'crm', icon: '📋', label: 'CRM', sub: 'Pipeline + fichas' },
-  { id: 'objecoes', icon: '🛡️', label: 'Objeções', sub: 'Quebrar resistência' },
-  { id: 'calc', icon: '🧮', label: 'Verbas', sub: 'Calculadora rescisória' },
-  { id: 'contrato', icon: '📄', label: 'Contrato', sub: 'Honorários completo' },
-  { id: 'presenca', icon: '📣', label: 'Presença Digital', sub: 'Conteúdo e anúncio' },
+  { id: 'lead',     icon: '⚡', label: '1. Lead',      sub: 'Analisar + fechar' },
+  { id: 'crm',      icon: '📋', label: '2. CRM',       sub: 'Pipeline + fichas' },
+  { id: 'contrato', icon: '📄', label: '3. Contrato',  sub: 'Honorários completo' },
+  { id: 'calc',     icon: '🧮', label: '4. Verbas',    sub: 'Calculadora rescisória' },
+  { id: 'presenca', icon: '📣', label: '5. MKT',       sub: 'Presença + Imagem IA' },
 ];
 
 export default function App() {
@@ -1188,8 +1766,8 @@ export default function App() {
       <div style={{ borderBottom: `1px solid ${T.border}`, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 10, background: T.surface, position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ width: 32, height: 32, background: `linear-gradient(135deg,${T.gold},#7a5810)`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>⚖</div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: 'Georgia, serif', fontSize: 16, fontWeight: 700, lineHeight: 1.2 }}>LeadFechado</div>
-          <div style={{ fontSize: 9, color: T.textDim, fontFamily: 'monospace', letterSpacing: '0.1em' }}>SUÍTE JURÍDICA TRABALHISTA · PRODUTO FINAL</div>
+          <div style={{ fontFamily: 'Georgia, serif', fontSize: 16, fontWeight: 700, lineHeight: 1.2 }}>FECHA CONTRATO</div>
+          <div style={{ fontSize: 9, color: T.textDim, fontFamily: 'monospace', letterSpacing: '0.1em' }}>INTELIGÊNCIA JURÍDICA COMERCIAL · PRODUTO FINAL</div>
         </div>
       </div>
       <div style={{ background: T.surface, borderBottom: `1px solid ${T.border}`, display: 'flex', overflowX: 'auto', padding: '0 8px' }}>
@@ -1203,9 +1781,8 @@ export default function App() {
       <div style={{ flex: 1, maxWidth: 700, width: '100%', margin: '0 auto', padding: '28px 18px 60px' }}>
         {active === 'lead' && <ToolLead onSaveCRM={handleSaveCRM} />}
         {active === 'crm' && <ToolCRM key={crmKey} />}
-        {active === 'objecoes' && <ToolObjecoes />}
-        {active === 'calc' && <ToolCalc />}
         {active === 'contrato' && <ToolContrato />}
+        {active === 'calc' && <ToolCalc />}
         {active === 'presenca' && <ToolPresenca />}
       </div>
       <style>{`
