@@ -226,6 +226,15 @@ RESPONDA SOMENTE com o JSON (sem markdown):
 const NC = { forte: T.green, moderado: T.yellow, fraco: T.red };
 const NB = { forte: T.greenBg, moderado: T.yellowBg, fraco: T.redBg };
 
+
+// Helper: cria entrada de histórico automático
+const novaEntrada = (icone, txt) => ({
+  icone,
+  txt,
+  auto: true,
+  data: new Date().toLocaleDateString('pt-BR'),
+  hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+});
 function BtnSalvarCRM({ savedCRM, onSave }) {
   return (
     <button onClick={onSave} disabled={savedCRM}
@@ -251,6 +260,7 @@ function ToolLead({ onSaveCRM }) {
   const [arquivo, setArquivo] = useState(null);
   const [nomeArquivo, setNomeArquivo] = useState('');
   const [savedCRM, setSavedCRM] = useState(false);
+  const [histAuto, setHistAuto] = useState([]);
 
   const handleArquivo = async (e) => {
     const file = e.target.files[0];
@@ -330,7 +340,9 @@ function ToolLead({ onSaveCRM }) {
     setErr(''); setLoading(true);
     try {
       const r = await callClaude(P_ANALISE, txt || 'Analise o documento anexado.', 1500, arquivo);
-      setAnalysis(r); setStep(2);
+      setAnalysis(r);
+      setHistAuto(prev => [...prev, novaEntrada('⚡', `Análise gerada — nível ${(r.nivel || '').toUpperCase()} — ${(r.violacoes || []).slice(0,2).join(', ')}`)]);
+      setStep(2);
     } catch (e) { setErr(e.message); } finally { setLoading(false); }
   };
 
@@ -341,12 +353,17 @@ function ToolLead({ onSaveCRM }) {
     try {
       const ctx = `Nome: ${analysis.nome}\nSituação: ${analysis.situacao}\nTempo: ${analysis.tempo_empresa}\nViolações: ${(analysis.violacoes || []).join('; ')}\nFundamentos: ${(analysis.fundamentos || []).slice(0, 3).join('; ')}`;
       const r = await callClaude(P_MENSAGEM_FORMATO(ABORDAGENS.find((a) => a.id === id)?.label, INSTRUCOES[id], fid), ctx);
-      setMsgs({ ...r, abId: id, fmtId: fid }); setStep(3);
+      setMsgs({ ...r, abId: id, fmtId: fid });
+      const abLabel = ABORDAGENS.find((a) => a.id === id)?.label || id;
+      const fmtLabel = FORMATOS.find((f) => f.id === fid)?.label || fid;
+      setHistAuto(prev => [...prev, novaEntrada('📨', `Mensagem gerada — tom ${abLabel} · ${fmtLabel}`)]);
+      setStep(3);
     } catch (e) { setErr(e.message); } finally { setLoading(false); }
   };
 
   const salvarCRM = () => {
     if (!analysis || savedCRM) return;
+    const entradaSalvo = novaEntrada('📥', 'Lead cadastrado no CRM');
     const novo = {
       id: Date.now(),
       nome: analysis.nome !== 'Não informado' ? analysis.nome : 'Lead sem nome',
@@ -357,7 +374,8 @@ function ToolLead({ onSaveCRM }) {
       tempo: analysis.tempo_empresa,
       salario: analysis.salario_estimado,
       violacoes: (analysis.violacoes || []).join('; '),
-      docs: [], hist: [],
+      docs: [],
+      hist: [...histAuto, entradaSalvo],
       createdAt: new Date().toLocaleDateString('pt-BR'),
     };
     try {
@@ -555,7 +573,7 @@ function ToolLead({ onSaveCRM }) {
             🛡️ Gerar Respostas para Objeções deste Lead →
           </Btn>
         </div>
-        <Btn variant="ghost" onClick={() => { setStep(1); setTxt(''); setAnalysis(null); setMsgs(null); setArquivo(null); setNomeArquivo(''); setSavedCRM(false); }} style={{ width: '100%', marginTop: 4 }}>
+        <Btn variant="ghost" onClick={() => { setStep(1); setTxt(''); setAnalysis(null); setMsgs(null); setArquivo(null); setNomeArquivo(''); setSavedCRM(false); setHistAuto([]); }} style={{ width: '100%', marginTop: 4 }}>
           + Analisar novo lead
         </Btn>
       </div>
@@ -563,14 +581,14 @@ function ToolLead({ onSaveCRM }) {
   }
 
   if (step === 4 && analysis) {
-    return <ToolObjecoesLead analysis={analysis} savedCRM={savedCRM} onSaveCRM={salvarCRM} onBack={() => setStep(3)} onNovoLead={() => { setStep(1); setTxt(''); setAnalysis(null); setMsgs(null); setArquivo(null); setNomeArquivo(''); setSavedCRM(false); }} />;
+    return <ToolObjecoesLead analysis={analysis} savedCRM={savedCRM} onSaveCRM={salvarCRM} onRegistrarHist={(e) => setHistAuto(prev => [...prev, e])} onBack={() => setStep(3)} onNovoLead={() => { setStep(1); setTxt(''); setAnalysis(null); setMsgs(null); setArquivo(null); setNomeArquivo(''); setSavedCRM(false); setHistAuto([]); }} />;
   }
 
   return null;
 }
 
 // ─── OBJEÇÕES DO LEAD (funil integrado) ───────────────────────────────────────
-function ToolObjecoesLead({ analysis, savedCRM, onSaveCRM, onBack, onNovoLead }) {
+function ToolObjecoesLead({ analysis, savedCRM, onSaveCRM, onRegistrarHist, onBack, onNovoLead }) {
   const [loading, setLoading] = useState(false);
   const [respostas, setRespostas] = useState(null);
   const [err, setErr] = useState('');
@@ -592,6 +610,7 @@ Retorne SOMENTE JSON no formato:
 
       const r = await callClaude(prompt, ctx, 2000);
       setRespostas(r.objecoes || []);
+      if (onRegistrarHist) onRegistrarHist(novaEntrada('🛡️', `Objeções geradas — ${(r.objecoes || []).length} respostas prontas`));
     } catch (e) { setErr(e.message); } finally { setLoading(false); }
   };
 
@@ -664,7 +683,7 @@ function Ficha({ lead, onBack, onSave, onDel }) {
   const up = (k, v) => setF((x) => ({ ...x, [k]: v }));
   const addNota = () => {
     if (!nota.trim()) return;
-    const h = [{ txt: nota, data: new Date().toLocaleDateString('pt-BR'), hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }, ...(f.hist || [])];
+    const h = [{ icone: '💬', txt: nota, auto: false, data: new Date().toLocaleDateString('pt-BR'), hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }, ...(f.hist || [])];
     setF((x) => ({ ...x, hist: h })); setNota('');
   };
   const toggleDoc = (d) => up('docs', (f.docs || []).includes(d) ? f.docs.filter((x) => x !== d) : [...(f.docs || []), d]);
@@ -782,11 +801,19 @@ function Ficha({ lead, onBack, onSave, onDel }) {
           <input value={nota} onChange={(e) => setNota(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addNota()} placeholder="Anotação... (Enter para salvar)" style={{ ...inp, flex: 1 }} />
           <Btn onClick={addNota} style={{ padding: '8px 14px', whiteSpace: 'nowrap', fontSize: 12 }}>+ Anotar</Btn>
         </div>
-        {!(f.hist || []).length && <div style={{ color: T.textDim, fontSize: 12, fontFamily: 'monospace' }}>Nenhum contato registrado.</div>}
+        {!(f.hist || []).length && <div style={{ color: T.textDim, fontSize: 12, fontFamily: 'monospace' }}>Nenhum evento registrado.</div>}
         {(f.hist || []).map((h, i) => (
-          <div key={i} style={{ borderLeft: `2px solid ${T.goldBorder}`, paddingLeft: 12, marginBottom: 10 }}>
-            <div style={{ color: T.text, fontSize: 13 }}>{h.txt}</div>
-            <div style={{ color: T.textDim, fontSize: 11, fontFamily: 'monospace', marginTop: 2 }}>{h.data} às {h.hora}</div>
+          <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+              <div style={{ width: 28, height: 28, borderRadius: '50%', background: h.auto ? T.goldDim : T.surface, border: `1px solid ${h.auto ? T.goldBorder : T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
+                {h.icone || '💬'}
+              </div>
+              {i < (f.hist || []).length - 1 && <div style={{ width: 1, flex: 1, background: T.border, minHeight: 10, marginTop: 3 }} />}
+            </div>
+            <div style={{ paddingBottom: 8, flex: 1 }}>
+              <div style={{ color: h.auto ? T.text : T.text, fontSize: 13, lineHeight: 1.5 }}>{h.txt}</div>
+              <div style={{ color: T.textDim, fontSize: 11, fontFamily: 'monospace', marginTop: 2 }}>{h.data} às {h.hora}{h.auto ? '' : ' · manual'}</div>
+            </div>
           </div>
         ))}
       </Card>
