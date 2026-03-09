@@ -651,7 +651,7 @@ const DOCS = [
 ];
 
 function Ficha({ lead, onBack, onSave, onDel }) {
-  const [f, setF] = useState({ cpf: '', endereco: '', vinculo: '', tempo: '', salario: '', violacoes: '', provas: '', honorarios: '', percentual: '', docs: [], hist: [], ...lead });
+  const [f, setF] = useState({ cpf: '', endereco: '', vinculo: '', tempo: '', salario: '', violacoes: '', provas: '', honorarios: '', percentual: '', docs: [], hist: [], reuniao_data: '', reuniao_hora: '', reuniao_tipo: 'video', reuniao_obs: '', ...lead });
   const [nota, setNota] = useState('');
   const up = (k, v) => setF((x) => ({ ...x, [k]: v }));
   const addNota = () => {
@@ -729,6 +729,45 @@ function Ficha({ lead, onBack, onSave, onDel }) {
         </div>
         <div style={{ marginTop: 10, color: T.textDim, fontSize: 11, fontFamily: 'monospace' }}>{(f.docs || []).length}/{DOCS.length} documentos recebidos</div>
       </Card>
+      <Card accent={f.reuniao_data ? T.blue : undefined}>
+        <Lbl>📅 Próxima Reunião</Lbl>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+          <div>
+            <Lbl>Data</Lbl>
+            <input type="date" value={f.reuniao_data || ''} onChange={(e) => up('reuniao_data', e.target.value)} style={inp} />
+          </div>
+          <div>
+            <Lbl>Hora</Lbl>
+            <input type="time" value={f.reuniao_hora || ''} onChange={(e) => up('reuniao_hora', e.target.value)} style={inp} />
+          </div>
+          <div>
+            <Lbl>Tipo</Lbl>
+            <select value={f.reuniao_tipo || 'video'} onChange={(e) => up('reuniao_tipo', e.target.value)} style={sel}>
+              <option value="video">📹 Vídeo (Meet/Zoom)</option>
+              <option value="presencial">🏢 Presencial</option>
+              <option value="telefone">📞 Telefone</option>
+              <option value="whatsapp">💬 WhatsApp</option>
+            </select>
+          </div>
+          <div>
+            <Lbl>Observação</Lbl>
+            <input value={f.reuniao_obs || ''} onChange={(e) => up('reuniao_obs', e.target.value)} placeholder="ex: trazer CTPS e holerites" style={inp} />
+          </div>
+        </div>
+        {f.reuniao_data && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ background: T.blueBg, border: `1px solid ${T.blue}25`, borderRadius: 8, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 16 }}>📅</span>
+              <span style={{ color: T.blue, fontSize: 13, fontWeight: 600 }}>
+                {new Date(f.reuniao_data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
+                {f.reuniao_hora ? ` às ${f.reuniao_hora}` : ''}
+              </span>
+            </div>
+            <button onClick={() => { up('reuniao_data', ''); up('reuniao_hora', ''); up('reuniao_obs', ''); }}
+              style={{ background: 'transparent', border: 'none', color: T.red, fontSize: 13, cursor: 'pointer' }}>✕ Limpar</button>
+          </div>
+        )}
+      </Card>
       <Card>
         <Lbl>💬 Histórico de Contatos</Lbl>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
@@ -778,8 +817,54 @@ function ToolCRM() {
   if (!loaded) return <div style={{ color: T.textMuted, padding: 40, textAlign: 'center', fontFamily: 'monospace' }}>Carregando...</div>;
   if (ficha) return <Ficha lead={ficha} onBack={() => setFicha(null)} onSave={saveFicha} onDel={delLead} />;
 
+  const hoje = new Date().toISOString().split('T')[0];
+  const reunioesHoje = leads.filter(l => l.reuniao_data === hoje).sort((a, b) => (a.reuniao_hora || '').localeCompare(b.reuniao_hora || ''));
+  const reunioesFuturas = leads.filter(l => l.reuniao_data && l.reuniao_data > hoje).sort((a, b) => a.reuniao_data.localeCompare(b.reuniao_data)).slice(0, 3);
+  const tipoIcon = { video: '📹', presencial: '🏢', telefone: '📞', whatsapp: '💬' };
+
   return (
     <div>
+      {(reunioesHoje.length > 0 || reunioesFuturas.length > 0) && (
+        <div style={{ background: T.blueBg, border: `1px solid ${T.blue}25`, borderRadius: 12, padding: '14px 16px', marginBottom: 18 }}>
+          {reunioesHoje.length > 0 && (
+            <>
+              <div style={{ fontSize: 11, color: T.blue, fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 10 }}>📅 HOJE</div>
+              {reunioesHoje.map(l => (
+                <div key={l.id} onClick={() => setFicha(l)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: T.surface, borderRadius: 9, marginBottom: 6, cursor: 'pointer', border: `1px solid ${T.blue}30` }}>
+                  <span style={{ fontSize: 18 }}>{tipoIcon[l.reuniao_tipo] || '📅'}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: T.text, fontSize: 13, fontWeight: 700 }}>{l.nome}</div>
+                    <div style={{ color: T.textMuted, fontSize: 11 }}>
+                      {l.reuniao_hora ? `${l.reuniao_hora} · ` : ''}{l.reuniao_tipo === 'video' ? 'Vídeo' : l.reuniao_tipo === 'presencial' ? 'Presencial' : l.reuniao_tipo === 'telefone' ? 'Telefone' : 'WhatsApp'}
+                      {l.reuniao_obs ? ` · ${l.reuniao_obs}` : ''}
+                    </div>
+                  </div>
+                  <span style={{ color: T.blue, fontSize: 11 }}>→</span>
+                </div>
+              ))}
+            </>
+          )}
+          {reunioesFuturas.length > 0 && (
+            <>
+              <div style={{ fontSize: 11, color: T.textMuted, fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 8, marginTop: reunioesHoje.length ? 12 : 0 }}>PRÓXIMAS</div>
+              {reunioesFuturas.map(l => (
+                <div key={l.id} onClick={() => setFicha(l)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 9, marginBottom: 5, cursor: 'pointer', borderBottom: `1px solid ${T.border}` }}>
+                  <span style={{ fontSize: 15 }}>{tipoIcon[l.reuniao_tipo] || '📅'}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: T.text, fontSize: 12, fontWeight: 600 }}>{l.nome}</div>
+                    <div style={{ color: T.textDim, fontSize: 11 }}>
+                      {new Date(l.reuniao_data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}
+                      {l.reuniao_hora ? ` às ${l.reuniao_hora}` : ''}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <Title sub="Pipeline completo do primeiro contato ao contrato assinado.">📋 CRM de Leads</Title>
         <Btn onClick={() => setShowForm(!showForm)} style={{ padding: '9px 14px', fontSize: 12, whiteSpace: 'nowrap' }}>+ Cadastrar Lead</Btn>
