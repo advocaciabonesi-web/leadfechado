@@ -29,7 +29,6 @@ async function callClaude(prompt, userContent, maxTokens = 1500, fileData = null
   const contentArr = [];
   if (fileData) contentArr.push(fileData);
   contentArr.push({ type: 'text', text: `${prompt}\n\n---\n\n${userContent}` });
-
   const res = await fetch('/api/analisar', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -54,16 +53,9 @@ async function callClaude(prompt, userContent, maxTokens = 1500, fileData = null
 
 // ─── COMPONENTES COMPARTILHADOS ───────────────────────────────────────────────
 const inp = {
-  background: T.surface,
-  border: `1px solid ${T.border}`,
-  borderRadius: 8,
-  padding: '10px 12px',
-  color: T.text,
-  fontSize: 13,
-  outline: 'none',
-  width: '100%',
-  boxSizing: 'border-box',
-  fontFamily: 'sans-serif',
+  background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8,
+  padding: '10px 12px', color: T.text, fontSize: 13, outline: 'none',
+  width: '100%', boxSizing: 'border-box', fontFamily: 'sans-serif',
 };
 const sel = { ...inp, cursor: 'pointer' };
 
@@ -127,17 +119,195 @@ function InfoBox({ children, color = T.gold }) {
 }
 
 // ─── PROMPTS JURÍDICOS ────────────────────────────────────────────────────────
-const P_ANALISE = `Você é um advogado trabalhista sênior com 20 anos de experiência no Brasil. Analise o relato do lead com precisão técnica.
 
-BASE JURÍDICA COMPLETA que você domina:
-CLT: arts. 9, 29, 41, 58-62 (jornada), 74 (controle de ponto), 118, 129-143 (férias), 166-200 (segurança), 223-A a 223-G (dano existencial/reforma), 240, 394-A (gestante), 441-507 (rescisão), 482-483 (justa causa/rescisão indireta)
-CF/88 art.7º: I (FGTS/despedida arbitrária), II (seguro-desemprego), IV (salário mínimo), VI (irredutibilidade), VIII (13º), IX (adicional noturno), XIII (jornada 8h/44h), XIV (turnos revezamento 6h), XV (repouso semanal), XVI (hora extra 50%), XVII (férias+1/3), XVIII (licença maternidade 120d), XIX (licença paternidade), XXII (saúde/segurança), XXIII (adicional insalubridade/periculosidade), XXIX (prescrição 5 anos/2 anos)
-TST Súmulas relevantes: 6 (equiparação salarial), 17 (gratificação natalina), 21 (CLT art.477), 29 (rescisão nula), 51 (norma coletiva), 55 (repouso semanal), 85 (compensação jornada), 114 (estabilidade cipeiro), 132 (adicional periculosidade), 138 (semana espanhola), 149 (pres.rurícola), 159 (hora extra), 172 (adicional noturno), 199 (bancário), 204 (equiparação), 212 (ônus prova dispensa), 219 (honorários), 228 (percentual insalubridade), 244 (gestante), 246 (FGTS falta grave), 260 (adicional férias), 277 (CCT), 291 (aviso prévio), 296 (horas extras), 303 (equiparação servidor), 331 (terceirização), 338 (ponto), 339 (adicional acúmulo), 358 (uniforme), 362 (prescrição FGTS), 363 (reconhecimento vínculo PJ), 366 (ata audiência), 369 (dirigente sindical), 372 (auxiliar enfermagem), 374 (sobreaviso), 376 (adicional noturno transferência), 377 (aviso prévio FGTS), 378 (rito sumaríssimo), 381 (proporcionalidade), 386 (domingos e feriados), 388 (jornada motorista), 391 (gestante contrato prazo), 392 (proteção gestante), 396 (amamentação), 437 (banco horas), 443 (aviso prévio proporcional), 450 (tempo pré-contratual)
-OJ SDI-1: 24 (adicional transferência), 57 (adicional noturno), 103 (bancário), 195 (repouso), 215 (aviso prévio), 232 (prescrição declaratória), 273 (FGTS rescisão indireta), 295 (FGTS), 361 (pres.FGTS), 363 (reconhecimento vínculo)
-Leis: 8.036/90 (FGTS art.18 multa 40%), 9.029/95 (discriminação), 9.601/98 (contrato prazo), 11.788/08 (estágio), 12.506/11 (aviso proporcional: 3d/ano + 30d base = máx 90d), 13.467/17 (reforma: art.444 PLT, art.611-A CCT prevalece, art.58-A tempo parcial), Lei 14.611/23 (igualdade salarial), LGPD 13.709/18
+// ── ALTERAÇÃO 1: BASE JURÍDICA EXPANDIDA ──────────────────────────────────────
+const P_ANALISE = `Você é um advogado trabalhista sênior com 20 anos de experiência no Brasil. Analise o relato do lead com máxima precisão técnica, usando toda a base jurídica abaixo.
 
-RESPONDA SOMENTE com o JSON (sem markdown, sem texto extra):
-{"nome":"nome ou Não informado","situacao":"empregado|demitido|rescisão indireta|autônomo|PJ|não informado","tempo_empresa":"X anos Y meses ou não informado","salario_estimado":"valor mensal estimado ou não informado","violacoes":["descrição clara da irregularidade"],"fundamentos":["Art. X CLT — descrição","Súmula X TST — descrição"],"provas_mencionadas":["prova citada no relato"],"provas_sugeridas":["prova que deve ser levantada"],"nivel":"forte|moderado|fraco","justificativa":"frase técnica explicando o nível","prescricao_alerta":"alerta sobre prazo prescricional se relevante ou null","alerta_risco":"risco jurídico ou estratégico ou null"}`;
+════════════════════════════════════════
+LEGISLAÇÃO FEDERAL
+════════════════════════════════════════
+CLT: arts. 9 (nulidade de ato prejudicial), 29, 41, 58-62 (jornada/sobreaviso/prontidão), 74 (controle de ponto — obrigatório acima de 10 empregados), 118 (estabilidade acidentado), 129-143 (férias), 143 (conversão em abono), 166-200 (segurança e medicina do trabalho), 223-A a 223-G (dano existencial e extrapatrimonial — Reforma 2017), 240, 394-A (gestante em local insalubre), 441-507 (rescisão), 467 (multa por atraso de verbas rescisórias), 477 (prazo pagamento rescisão — 10 dias), 482-483 (justa causa / rescisão indireta), 611-A (prevalência da negociação coletiva), 611-B (direitos irrenunciáveis — rol taxativo).
+CF/88 art. 7º: I (FGTS/despedida arbitrária), II (seguro-desemprego), IV (salário mínimo), VI (irredutibilidade salarial), VIII (13º salário), IX (adicional noturno mín. 20%), XIII (jornada 8h/44h semanal), XIV (turno de revezamento 6h), XV (repouso semanal remunerado), XVI (hora extra mín. 50%), XVII (férias + 1/3), XVIII (licença-maternidade 120 dias), XIX (licença-paternidade), XXII (saúde e segurança), XXIII (adicional insalubridade/periculosidade), XXIX (prescrição: 5 anos durante contrato, 2 anos após extinção), XXX (proibição diferença salarial por sexo/idade/cor/estado civil), XXXI (proibição discriminação ao portador de deficiência).
+Leis complementares: 8.036/90 (FGTS — art. 18 §1º multa 40%; art. 20 hipóteses de saque), 9.029/95 (discriminação na relação de trabalho), 9.601/98 (contrato por prazo determinado), 10.101/00 (PLR), 11.788/08 (estágio — art. 15: vínculo se descumpridos requisitos), 12.506/11 (aviso prévio proporcional: 30 dias base + 3 dias por ano completo, máx. 90 dias), 13.467/17 (Reforma Trabalhista: art. 444 PLT, art. 58-A tempo parcial, art. 443 contrato intermitente, art. 507-A cláusula arbitral acima de 2x teto RGPS), 14.611/23 (igualdade salarial entre homens e mulheres — relatório de transparência obrigatório para empresas acima de 100 empregados), LGPD 13.709/18 (proteção de dados do trabalhador).
+
+════════════════════════════════════════
+SÚMULAS DO TST — COMPLETAS E ATUALIZADAS
+════════════════════════════════════════
+[RESCISÃO E ESTABILIDADE]
+Súm. 6 — Equiparação salarial: requisitos (mesma função, mesmo empregador, mesmo estabelecimento, diferença máx. 4 anos na função, 2 anos no cargo; paradigma vivo na função).
+Súm. 21 — Contrato por prazo determinado: ausência de aviso prévio não gera direito a indenização, salvo cláusula assecuratória.
+Súm. 29 — Nulidade de rescisão: quando a ruptura do contrato é ilegal, presume-se que o vínculo não foi interrompido.
+Súm. 43 — Presunção de despedida arbitrária: alteração da condição de trabalho — ônus do empregador provar motivação legítima.
+Súm. 51 — Norma regulamentar: quando alterada, aplica-se a nova para admitidos após a mudança e a anterior para os demais (§ único: direito adquirido ao regulamento vigente).
+Súm. 212 — Ônus da prova da dispensa: do empregador, inclusive quanto à modalidade (com ou sem justa causa).
+Súm. 291 — Aviso prévio proporcional (antes da Lei 12.506/11): 3 dias por ano de serviço, limitado a 60 dias. Após a lei: 3 dias/ano, máx. 90 dias total.
+Súm. 369 — Dirigente sindical: garantia de emprego desde registro da candidatura até 1 ano após o mandato (CF art. 8º VIII).
+Súm. 377 — FGTS no aviso prévio indenizado: integra a base de cálculo do depósito.
+Súm. 378 — Estabilidade acidentado (art. 118 CLT): não se exige afastamento superior a 15 dias; basta nexo causal e CAT (ou reconhecimento pelo INSS).
+Súm. 390 — Estabilidade do servidor público celetista: aplicável a estados e municípios que não adotaram regime estatutário.
+Súm. 392 — Gestante — garantia de emprego: confirmação da gravidez antes ou após a dispensa não afasta a nulidade (mesmo sem ciência do empregador).
+Súm. 396 — Estabilidade provisória — indenização: se expirado o período sem a reintegração, a indenização é devida do início até o fim do período.
+Súm. 443 — Doença grave estigmatizante: presunção de dispensa discriminatória (HIV, hepatite, neoplasia, alcoolismo, etc.) — nulidade ou indenização.
+Súm. 450 — Férias: pagamento fora do prazo legal gera direito a pagamento em dobro, incluindo o terço constitucional.
+
+[JORNADA E HORAS EXTRAS]
+Súm. 85 — Compensação de jornada: acordo individual escrito é válido para compensação semanal; banco de horas exige ACT/CCT.
+Súm. 105 — Motorista/cobrador: tempo de espera integra a jornada se à disposição do empregador.
+Súm. 112 — Trabalho em condições insalubres: não excluí cômputo de horas extras.
+Súm. 116 — Adicional noturno: hora noturna reduzida (52'30''); devido mesmo após as 5h da manhã se a jornada se iniciou no período noturno.
+Súm. 132 — Adicional de periculosidade: eletricitários — incide sobre a remuneração total (acórdão SDI-1).
+Súm. 138 — Semana espanhola (sistema 6x1 com compensação): nulo se não amparado por norma coletiva.
+Súm. 159 — Horas extras habituais: integram a remuneração para todos os fins (DSR, férias, 13º, aviso prévio, FGTS).
+Súm. 172 — Adicional noturno: integra a base de cálculo das horas extras noturnas.
+Súm. 199 — Bancário — horas extras: a 6ª hora diária é extra para os enquadrados no art. 224 CLT; cargo de confiança diferenciado (§ 2º) faz jornada de 8h.
+Súm. 228 — Insalubridade: base de cálculo é o salário mínimo (após declaração de inconstitucionalidade parcial do art. 192 CLT pelo STF — RE 565.714), salvo norma coletiva mais favorável.
+Súm. 264 — Salário-hora: divisor 200 (mensalista) e 150 (semanalista 5 dias) para cálculo de horas extras.
+Súm. 296 — Horas extras: comprovação pelo empregado das horas que excederem o limite legal; ônus do empregador para diferenças internas.
+Súm. 338 — Ponto eletrônico / controle de jornada: ônus do empregador com mais de 10 empregados; ausência de registro inverte o ônus.
+Súm. 340 — Comissionista puro: horas extras = 50% sobre a hora normal calculada pela média das comissões.
+Súm. 360 — Contrato de trabalho — horas extras: o acordo de prorrogação de jornada não pode ser tácito.
+Súm. 374 — Sobreaviso: regime de pré-contratação via celular/aplicativo que restrinja a liberdade de locomoção é sobreaviso (1/3 da hora normal).
+Súm. 376 — Adicional noturno em transferência: mantém-se o adicional se o horário noturno era habitual antes da transferência.
+Súm. 388 — Motorista profissional (Lei 13.103/15): tempo de espera não é horas extras; jornada diária 8h, semanal 44h.
+Súm. 437 — Intervalo intrajornada: supressão total ou parcial gera pagamento integral do período suprimido como hora extra (§ 4º art. 71 CLT — mesmo após Reforma para contratos anteriores).
+Súm. 444 — Jornada 12x36: válida se prevista em lei ou negociação coletiva; integra feriados e DSRs.
+
+[FÉRIAS E DESCANSO]
+Súm. 7 — Férias: é possível recorrer ao TST de decisão que condena em dobro sem prova de ausência de concessão.
+Súm. 149 — Rurícola: prescrição de 2 anos após extinção (CF art. 7º XXIX). Antes da CF/88: apenas ação trabalhista em 2 anos.
+Súm. 261 — Férias proporcionais: devidas mesmo no pedido de demissão com menos de 12 meses (art. 147 CLT).
+Súm. 328 — Férias + 1/3: integra a remuneração para fins de cálculo do 13º e demais verbas que tomam como base a remuneração.
+Súm. 381 — 13º salário proporcional: o aviso prévio indenizado integra o tempo de serviço para fins de proporcionalidade.
+Súm. 386 — Domingos e feriados (comércio): o trabalho nesses dias, sem compensação ou pagamento, gera adicional de 100%.
+
+[FGTS E MULTA]
+Súm. 246 — FGTS na justa causa: não há multa de 40%, salvo se a justa causa for declarada inválida.
+Súm. 362 — Prescrição do FGTS: trintenária antes da ADC 58/STF (2020); após a ADC 58 — prescrição de 5 anos, limitada a 30 anos para contratos anteriores.
+Súm. 461 — FGTS: o empregador que não efetua os depósitos no prazo é responsável pela correção monetária e juros (art. 22 Lei 8.036/90).
+
+[VÍNCULO EMPREGATÍCIO E TERCEIRIZAÇÃO]
+Súm. 212 — Ônus da prova da despedida: do empregador.
+Súm. 257 — Vigilante — vínculo: reconhecido com a empresa tomadora se ausente contrato de vigilância registrado.
+Súm. 331 — Terceirização: (I) ilícita quando relacionada à atividade-fim, salvo trabalho temporário; (II) não forma vínculo com a Administração Pública; (III) responsabilidade subsidiária da tomadora pelas verbas inadimplidas; (IV) tomadora pública — responsabilidade mediante comprovação de culpa in vigilando; (V) licitude da terceirização de atividade-fim após ADPF 324/STF e RE 958.252 (2018) — qualquer atividade pode ser terceirizada; (VI) responsabilidade subsidiária da tomadora permanece mesmo após a liberalização.
+Súm. 363 — Vínculo nulo (administração pública sem concurso): direito apenas ao saldo salarial e FGTS; sem outras verbas.
+Súm. 386 — Franquia: pode ou não gerar vínculo com a franqueadora, dependendo das circunstâncias fáticas.
+Súm. 443 — Presunção de dispensa discriminatória: inversão do ônus da prova.
+
+[DANO MORAL E EXTRAPATRIMONIAL]
+Súm. 37 — Danos morais e patrimoniais: podem ser cumulados na mesma ação (aplicado ao processo do trabalho por analogia — arts. 223-A a 223-G CLT).
+Arts. 223-A a 223-G CLT (Reforma 2017): regulam o dano extrapatrimonial trabalhista; tarifação por ofensa (leve, média, grave, gravíssima) com base no último salário contratual — questionada perante STF (ADI 6050, 6069, 6082 — julgamento pendente parcial).
+
+[HONORÁRIOS E CUSTAS]
+Súm. 219 — Honorários advocatícios trabalhistas: antes da Reforma — apenas com assistência sindical e estado de miserabilidade (10-20%). Após 11.11.2017: art. 791-A CLT — sucumbência de 5 a 15%, mesmo para beneficiários da justiça gratuita (§ 4º — suspenso se insuficiência de créditos).
+Súm. 329 — Honorários: a declaração de pobreza gera presunção relativa de hipossuficiência.
+
+[PRESCRIÇÃO]
+Súm. 308 — Prescrição: conta-se a partir da lesão (actio nata), não do término do contrato.
+Súm. 362 — FGTS: trintenária até 13/11/2014; após ADC 58/STF (2020): 5 anos, limitado a 30 anos para períodos anteriores.
+Súm. 382 — Prescrição — contrato nulo (menor de 18 anos): não corre durante a menoridade.
+
+════════════════════════════════════════
+ORIENTAÇÕES JURISPRUDENCIAIS — SDI-1
+════════════════════════════════════════
+OJ 24 — Adicional de transferência (art. 469 §3º CLT): devido ao empregado transferido provisoriamente sem anuência — 25% sobre o salário.
+OJ 57 — Adicional noturno: redução da hora noturna (52'30'') aplica-se às prorrogações em horário diurno posterior às 5h.
+OJ 103 — Bancário — tempo no banco: o tempo gasto em trajeto entre bancos é computado como jornada.
+OJ 155 — Gratificação de função: se recebida por 10 anos ou mais, incorpora-se ao salário (irredutibilidade).
+OJ 195 — Repouso semanal remunerado: supressão habitual gera reflexos em outras verbas (férias, 13º, aviso prévio).
+OJ 215 — Aviso prévio: o prazo prescricional só se inicia após o término do aviso prévio (trabalhado ou indenizado).
+OJ 232 — Prescrição declaratória: cabe declaratória do vínculo mesmo após prescrição da pretensão condenatória.
+OJ 273 — Rescisão indireta — FGTS: devida a multa de 40% na rescisão indireta.
+OJ 275 — Motorista — horas de espera (anterior à Lei 13.103/15): compõem a jornada se o empregado permanece à disposição.
+OJ 295 — FGTS — atraso: depósito intempestivo gera correção monetária integral.
+OJ 321 — Contrato de experiência: prorrogado tacitamente além de 90 dias converte-se em prazo indeterminado.
+OJ 361 — Prescrição FGTS: 30 anos para contratos anteriores a 14/11/2019; 5 anos para contratos posteriores (ADC 58/2020).
+OJ 363 — Reconhecimento de vínculo: ônus da prova do empregado quando nega o vínculo o suposto empregador.
+OJ 394 — Gestante — contrato de experiência: a garantia de emprego aplica-se mesmo durante o contrato de experiência.
+OJ 400 — Salário in natura — habitação: não integra a base do FGTS quando é condição indispensável ao trabalho.
+OJ 417 — Empregado rural — motorista: se transporta insumos da atividade rural, é rurícola.
+
+════════════════════════════════════════
+ORIENTAÇÕES JURISPRUDENCIAIS — SDI-2
+════════════════════════════════════════
+OJ 65 — Mandado de segurança — penhora de dinheiro: é legítima a penhora de dinheiro para garantia de execução trabalhista.
+OJ 142 — Ação rescisória — erro de fato: configurado quando a decisão admite fato inexistente ou desconsidera fato existente.
+
+════════════════════════════════════════
+ORIENTAÇÕES JURISPRUDENCIAIS — SDC
+════════════════════════════════════════
+OJ 5 — Dissídio coletivo — greve: é abusiva a greve que não observa o prazo de comunicação prévia de 72h (serviços essenciais: 96h).
+OJ 17 — Cláusula normativa — ultratividade: após a Reforma (art. 614 §3º CLT) é vedada a ultratividade; instrumentos coletivos vigoram por prazo certo máx. 2 anos.
+
+════════════════════════════════════════
+TEMAS REPETITIVOS VINCULANTES — TST
+════════════════════════════════════════
+Tema 1 — Acordo de compensação de jornada (banco de horas): invalidade do acordo tácito ou verbal; exige instrumento escrito ou norma coletiva. Banco de horas anual exige ACT/CCT (Súm. 85, V).
+Tema 2 — Intervalo intrajornada (art. 71 CLT): supressão total ou parcial — pagamento integral do período como hora extra com adicional de 50%. Após Reforma (contrato pós 11/11/17): apenas o período suprimido com natureza indenizatória (não mais hora extra).
+Tema 3 — Intervalo interjornada (art. 66 CLT): supressão gera pagamento das horas faltantes como extras (OJ 355 SDI-1).
+Tema 4 — FGTS — prescrição — ADC 58: contratos extintos antes de 14/11/2019 — prescrição trintenária até o máximo de 30 anos. Contratos iniciados após: 5 anos.
+Tema 5 — Terceirização lícita após ADPF 324 e RE 958.252 (STF, 2018): qualquer atividade pode ser terceirizada, inclusive atividade-fim. Súm. 331 itens V e VI permanecem (responsabilidade subsidiária da tomadora).
+Tema 6 — Empregado hipersuficiente (art. 444 §único CLT): salário ≥ 2x teto do RGPS + diploma de nível superior — pode pactuar individualmente condições previstas no art. 611-A. Entendimento controverso; STF ainda analisa (ADI 5766).
+Tema 7 — Dano extrapatrimonial — tarifação (arts. 223-A a 223-G CLT): constitucionalidade debatida no STF (ADIs 6050/6069/6082); TRT's divergem. Tese majoritária: tarifação não impede fixação superior se proporcional à gravidade, vedado apenas o non liquet.
+Tema 8 — Gratuidade da justiça (art. 790 §3º CLT pós-Reforma): basta declaração de insuficiência de recursos; não exige comprovação documental (Súm. 463 TST).
+Tema 9 — Honorários sucumbenciais do beneficiário da gratuidade (art. 791-A §4º CLT): suspensos por 2 anos se insuficiência de créditos — STF declarou parcialmente inconstitucional na ADI 5766 (honorários periciais não podem ser cobrados do beneficiário da gratuidade).
+Tema 10 — Contrato intermitente (art. 443 §3º CLT): compatível com a CF/88; convocação não aceita não gera indenização; FGTS sobre valor recebido por convocação.
+Tema 11 — Ultratividade de norma coletiva (art. 614 §3º CLT): vedada após a Reforma; instrumentos coletivos vigoram por prazo determinado máx. 2 anos, sem prorrogação automática.
+Tema 12 — Rescisão por acordo (art. 484-A CLT): multa FGTS 20%; aviso prévio 50%; sem seguro-desemprego; saque de 80% do FGTS.
+Tema 13 — Assédio moral organizacional: configurado por condutas sistemáticas do empregador que degradam o ambiente de trabalho — gera dano moral coletivo e individual (art. 223-C CLT).
+Tema 14 — Teletrabalho / home office (art. 75-A a 75-E CLT): controle de jornada — se houver, gera horas extras; sem controle: exclui o capítulo de duração (art. 62 III CLT). Acordo individual escrito obrigatório.
+Tema 15 — Trabalho em plataformas digitais (uberização): STF — RE 1.446.336 (Repercussão Geral reconhecida, 2024) — definirá se há vínculo empregatício entre motoristas de aplicativo e plataformas. Pendente de julgamento definitivo. TRTs divergem: TRT-2 (SP), TRT-3 (MG) e TRT-15 (Campinas) já reconheceram vínculo em casos concretos.
+
+════════════════════════════════════════
+SÚMULAS DE TRTs — POR MATÉRIA RELEVANTE
+════════════════════════════════════════
+[HORAS EXTRAS / JORNADA]
+TRT-2 (SP) Súm. 24 — Controle de ponto: ausência de registro inverte o ônus da prova em favor do empregado.
+TRT-3 (MG) Súm. 58 — Sobreaviso via celular: restrição à liberdade de locomoção configura sobreaviso (1/3).
+TRT-4 (RS) Súm. 60 — Horas extras habituais: integram a remuneração para todos os reflexos, inclusive aviso prévio.
+TRT-15 (Campinas) Súm. 32 — Banco de horas unilateral: inválido sem previsão em norma coletiva.
+TRT-18 (GO) Súm. 5 — Intervalo intrajornada: supressão parcial — pagamento integral do período, não apenas do tempo suprimido.
+
+[VÍNCULO EMPREGATÍCIO / TERCEIRIZAÇÃO]
+TRT-1 (RJ) Súm. 26 — Tomadora de serviço: responsabilidade subsidiária reconhecida independentemente de integrar licitação pública, desde que haja culpa in vigilando.
+TRT-2 (SP) Súm. 15 — Pejotização: configurado o vínculo quando presentes os requisitos do art. 3º CLT, ainda que mediante contrato de prestação de serviços com pessoa jurídica.
+TRT-3 (MG) Súm. 43 — Terceirização ilícita: reconhecimento de vínculo direto com a tomadora se configurada fraude.
+TRT-12 (SC) Súm. 29 — Plataforma digital: análise casuística dos elementos fáticos; presunção de vínculo se houver controle de jornada e exclusividade.
+
+[RESCISÃO / ESTABILIDADE]
+TRT-4 (RS) Súm. 49 — Gestante em contrato de experiência: garantia de emprego desde a concepção, independentemente do conhecimento do empregador.
+TRT-9 (PR) Súm. 15 — Aviso prévio proporcional: o período proporcional (Lei 12.506/11) integra o contrato para fins de contagem de tempo de serviço e FGTS.
+TRT-9 (PR) Súm. 21 — Rescisão indireta: comprovado o descumprimento culposo do empregador (art. 483 CLT), são devidas todas as verbas da demissão sem justa causa, incluindo multa FGTS 40%.
+TRT-15 (Campinas) Súm. 41 — Doença ocupacional: nexo causal presumido quando a atividade é de risco; ônus do empregador afastar o nexo.
+TRT-10 (DF/TO) Súm. 18 — Dispensa discriminatória: reintegração ou indenização em dobro (Lei 9.029/95 art. 4º), à escolha do empregado.
+
+[DANO MORAL / EXTRAPATRIMONIAL]
+TRT-2 (SP) Súm. 42 — Assédio moral: presunção relativa quando a conduta do superior hierárquico é reiterada e documentada por testemunhos.
+TRT-3 (MG) Súm. 59 — Dano existencial: configurado quando a supressão habitual do intervalo intrajornada ou jornada excessiva compromete o projeto de vida do empregado.
+TRT-15 (Campinas) Súm. 45 — Tarifação do dano extrapatrimonial: o teto do art. 223-G CLT não é absoluto; o juiz pode superar se a lesão for gravíssima e concretamente demonstrada.
+TRT-9 (PR) Súm. 19 — Dano moral por revista íntima: configura ofensa à dignidade (art. 5º X CF/88), independentemente de consentimento.
+
+[FGTS / VERBAS RESCISÓRIAS]
+TRT-1 (RJ) Súm. 32 — FGTS — atraso sistemático: gera dano material autônomo, além da correção monetária.
+TRT-4 (RS) Súm. 55 — Multa do art. 477 CLT: devida quando o pagamento das verbas rescisórias superar 10 dias da extinção do contrato, salvo comprovação de pagamento parcial tempestivo.
+TRT-9 (PR) Súm. 16 — Multa do art. 467 CLT: incide sobre verbas rescisórias incontroversas não pagas na audiência.
+
+[PLATAFORMAS DIGITAIS — TENDÊNCIA]
+TRT-2 (SP) — Decisões de turmas (2023-2024): reconhecimento de vínculo de motoristas Uber e iFood quando demonstrados controle algorítmico, exclusividade de fato e subordinação estrutural.
+TRT-3 (MG) — Idem, com tese de subordinação por dependência econômica.
+TRT-15 (Campinas) — Idem, acrescentando que a unilateralidade das regras da plataforma configura poder diretivo.
+
+════════════════════════════════════════
+REGRAS DE ANÁLISE
+════════════════════════════════════════
+1. Identifique TODAS as violações possíveis, inclusive as não óbvias (ex.: dano existencial por jornada excessiva, acúmulo de funções sem adicional, assédio moral organizacional).
+2. Cite sempre o fundamento legal mais específico disponível (artigo + lei + súmula/OJ/Tema Repetitivo).
+3. Considere súmulas de TRTs quando houver indicação da localidade do lead.
+4. Avalie provas disponíveis versus provas a levantar.
+5. Alerte sobre prescrição iminente (< 6 meses do término do contrato).
+6. Nível forte: 3+ violações sólidas com fundamento claro. Moderado: 1-2 violações ou prova fraca. Fraco: situação sem violações claras ou prescrição consumada.
+
+RESPONDA SOMENTE com o JSON abaixo (sem markdown, sem texto extra):
+{"nome":"nome ou Não informado","cidade":"cidade ou Não informada","situacao":"empregado|demitido|rescisão indireta|autônomo|PJ|não informado","tempo_empresa":"X anos Y meses ou não informado","salario_estimado":"valor mensal estimado ou não informado","violacoes":["descrição clara da irregularidade"],"fundamentos":["Art. X CLT — descrição","Súmula X TST — descrição","OJ X SDI-1 — descrição","Tema Repetitivo X TST — descrição"],"trt_aplicavel":"TRT competente com base na cidade informada, ou null","sumulas_trt":["Súmula X TRT-Y — descrição aplicável ao caso, se houver"],"provas_mencionadas":["prova citada no relato"],"provas_sugeridas":["prova que deve ser levantada"],"nivel":"forte|moderado|fraco","justificativa":"frase técnica explicando o nível","prescricao_alerta":"alerta sobre prazo prescricional se relevante ou null","alerta_risco":"risco jurídico ou estratégico ou null"}`;
 
 const P_MENSAGEM = (abordagem, instrucao) => `Você é um advogado trabalhista gerando mensagens de WhatsApp para FECHAR CONTRATO.
 ABORDAGEM: ${abordagem} — ${instrucao}
@@ -189,27 +359,28 @@ const P_INDICACAO = `Você é um advogado trabalhista criando mensagem para reat
 RESPONDA SOMENTE com o JSON (sem markdown):
 {"mensagem_whatsapp":"mensagem natural e humanizada para WhatsApp","mensagem_email":"versão para e-mail ou LinkedIn, mais formal","por_que_funciona":"razão psicológica e técnica da abordagem"}`;
 
-// ─── 1. ANALISAR LEAD ─────────────────────────────────────────────────────────
+// ─── ABORDAGENS E FORMATOS ────────────────────────────────────────────────────
 const ABORDAGENS = [
-  { id: 'urgencia', icon: '⚡', label: 'Urgência', cor: T.red, desc: 'Lead procrastinando — prescrição em risco' },
-  { id: 'empatia', icon: '🤝', label: 'Empatia', cor: T.purple, desc: 'Lead abalado, inseguro, com medo' },
-  { id: 'autoridade', icon: '⚖️', label: 'Autoridade', cor: T.gold, desc: 'Lead quer sentir que fala com expert' },
-  { id: 'racional', icon: '📊', label: 'Racional', cor: T.blue, desc: 'Lead quer entender antes de decidir' },
-  { id: 'exclusivo', icon: '🎯', label: 'Exclusividade', cor: T.green, desc: 'Lead precisa do empurrão final' },
+  { id: 'urgencia',   icon: '⚡', label: 'Urgência',       cor: T.red,    desc: 'Lead procrastinando — prescrição em risco' },
+  { id: 'empatia',    icon: '🤝', label: 'Empatia',        cor: T.purple, desc: 'Lead abalado, inseguro, com medo' },
+  { id: 'autoridade', icon: '⚖️', label: 'Autoridade',     cor: T.gold,   desc: 'Lead quer sentir que fala com expert' },
+  { id: 'racional',   icon: '📊', label: 'Racional',       cor: T.blue,   desc: 'Lead quer entender antes de decidir' },
+  { id: 'exclusivo',  icon: '🎯', label: 'Exclusividade',  cor: T.green,  desc: 'Lead precisa do empurrão final' },
 ];
+
 const INSTRUCOES = {
-  urgencia: 'Mencione DIRETAMENTE o prazo prescricional de 2 anos após extinção do contrato (art. 7º XXIX CF/88, art. 11 CLT). Cada dia sem agir é risco real de perder direitos. Tom firme e respeitoso.',
-  empatia: 'Valide o sofrimento primeiro. Mostre que entende a situação difícil. O advogado é parceiro, não vendedor. Tom acolhedor, humano. Cite proteção legal que ampara essa pessoa.',
+  urgencia:   'Mencione DIRETAMENTE o prazo prescricional de 2 anos após extinção do contrato (art. 7º XXIX CF/88, art. 11 CLT). Cada dia sem agir é risco real de perder direitos. Tom firme e respeitoso.',
+  empatia:    'Valide o sofrimento primeiro. Mostre que entende a situação difícil. O advogado é parceiro, não vendedor. Tom acolhedor, humano. Cite proteção legal que ampara essa pessoa.',
   autoridade: 'Demonstre domínio técnico imediato. Cite artigos da CLT e Súmulas do TST aplicáveis ao caso. Tom seguro, de referência no assunto. O cliente deve sentir que está com o melhor.',
-  racional: 'Apresente os direitos de forma objetiva. Relate o que ele tem a ganhar e o risco de não agir. Cite o percentual de êxito da área. Tom educativo, transparente, sem pressão.',
-  exclusivo: 'Crie senso de oportunidade — atenção personalizada, análise completa feita, janela aberta agora. Tom de oportunidade única sem desespero. Valorize o tempo que já dedicou ao caso.',
+  racional:   'Apresente os direitos de forma objetiva. Relate o que ele tem a ganhar e o risco de não agir. Cite o percentual de êxito da área. Tom educativo, transparente, sem pressão.',
+  exclusivo:  'Crie senso de oportunidade — atenção personalizada, análise completa feita, janela aberta agora. Tom de oportunidade única sem desespero. Valorize o tempo que já dedicou ao caso.',
 };
 
 const FORMATOS = [
-  { id: 'whatsapp', icon: '💬', label: 'WhatsApp', desc: 'Curto e direto, máx 5 linhas' },
-  { id: 'email', icon: '📧', label: 'E-mail', desc: 'Formal, completo, com saudação' },
-  { id: 'ligacao', icon: '📞', label: 'Roteiro de Ligação', desc: 'Script para falar ao telefone' },
-  { id: 'formal', icon: '📋', label: 'Mensagem Formal', desc: 'Profissional para LinkedIn/escritório' },
+  { id: 'whatsapp', icon: '💬', label: 'WhatsApp',         desc: 'Curto e direto, máx 5 linhas' },
+  { id: 'email',    icon: '📧', label: 'E-mail',           desc: 'Formal, completo, com saudação' },
+  { id: 'ligacao',  icon: '📞', label: 'Roteiro de Ligação', desc: 'Script para falar ao telefone' },
+  { id: 'formal',   icon: '📋', label: 'Mensagem Formal',  desc: 'Profissional para LinkedIn/escritório' },
 ];
 
 const P_MENSAGEM_FORMATO = (abordagem, instrucao, formato) => `Você é um advogado trabalhista gerando comunicação para FECHAR CONTRATO.
@@ -226,15 +397,13 @@ RESPONDA SOMENTE com o JSON (sem markdown):
 const NC = { forte: T.green, moderado: T.yellow, fraco: T.red };
 const NB = { forte: T.greenBg, moderado: T.yellowBg, fraco: T.redBg };
 
-
-// Helper: cria entrada de histórico automático
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
 const novaEntrada = (icone, txt) => ({
-  icone,
-  txt,
-  auto: true,
+  icone, txt, auto: true,
   data: new Date().toLocaleDateString('pt-BR'),
   hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
 });
+
 function BtnSalvarCRM({ savedCRM, onSave }) {
   return (
     <button onClick={onSave} disabled={savedCRM}
@@ -248,26 +417,29 @@ function BtnSalvarCRM({ savedCRM, onSave }) {
   );
 }
 
+// ─── 1. ANALISAR LEAD ─────────────────────────────────────────────────────────
+// ── ALTERAÇÃO 2: FUNIL COMPLETO — step 0 = saudação, step 1 = coleta nome/cidade, step 2 = relato
 function ToolLead({ onSaveCRM }) {
-  const [step, setStep] = useState(1);
-  const [txt, setTxt] = useState('');
-  const [analysis, setAnalysis] = useState(null);
-  const [msgs, setMsgs] = useState(null);
-  const [ab, setAb] = useState('urgencia');
-  const [fmt, setFmt] = useState('whatsapp');
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState('');
-  const [arquivo, setArquivo] = useState(null);
+  const [step, setStep]           = useState(0);   // 0=saudação 1=coleta 2=relato 3=análise 4=mensagens 5=objeções
+  const [leadNome, setLeadNome]   = useState('');
+  const [leadCidade, setLeadCidade] = useState('');
+  const [txt, setTxt]             = useState('');
+  const [analysis, setAnalysis]   = useState(null);
+  const [msgs, setMsgs]           = useState(null);
+  const [ab, setAb]               = useState('urgencia');
+  const [fmt, setFmt]             = useState('whatsapp');
+  const [loading, setLoading]     = useState(false);
+  const [err, setErr]             = useState('');
+  const [arquivo, setArquivo]     = useState(null);
   const [nomeArquivo, setNomeArquivo] = useState('');
-  const [savedCRM, setSavedCRM] = useState(false);
-  const [histAuto, setHistAuto] = useState([]);
+  const [savedCRM, setSavedCRM]   = useState(false);
+  const [histAuto, setHistAuto]   = useState([]);
 
   const handleArquivo = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     setErr('');
 
-    // ZIP — exportação do WhatsApp
     if (file.name.endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed') {
       try {
         const JSZipMod = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
@@ -277,30 +449,22 @@ function ToolLead({ onSaveCRM }) {
         const arquivosAudio = [];
         for (const [nome, entry] of Object.entries(zip.files)) {
           if (!entry.dir) {
-            if (nome.endsWith('.txt')) {
-              textoConversa = await entry.async('string');
-            } else if (nome.match(/\.(mp4|m4a|opus|ogg|aac|mp3)$/i)) {
-              arquivosAudio.push(nome);
-            }
+            if (nome.endsWith('.txt')) textoConversa = await entry.async('string');
+            else if (nome.match(/\.(mp4|m4a|opus|ogg|aac|mp3)$/i)) arquivosAudio.push(nome);
           }
         }
         if (textoConversa) {
           setTxt(textoConversa.slice(0, 8000));
           setNomeArquivo(file.name + ' ✓ conversa extraída');
           setArquivo(null);
-          if (arquivosAudio.length > 0) {
-            setErr('✓ Conversa extraída! ' + arquivosAudio.length + ' áudio(s) encontrado(s) — transcrição automática em breve.');
-          }
+          if (arquivosAudio.length > 0) setErr('✓ Conversa extraída! ' + arquivosAudio.length + ' áudio(s) encontrado(s) — transcrição automática em breve.');
         } else {
           setErr('Nenhum texto encontrado no ZIP. Confirme se é exportação do WhatsApp.');
         }
-      } catch (zipErr) {
-        setErr('Erro ao abrir o ZIP. Extraia manualmente e cole o texto aqui.');
-      }
+      } catch (_) { setErr('Erro ao abrir o ZIP. Extraia manualmente e cole o texto aqui.'); }
       return;
     }
 
-    // TXT simples
     if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
       const reader = new FileReader();
       reader.onload = () => { setTxt(reader.result.slice(0, 8000)); setNomeArquivo(file.name); setArquivo(null); };
@@ -308,28 +472,21 @@ function ToolLead({ onSaveCRM }) {
       return;
     }
 
-    // Áudio avulso do WhatsApp
     if (file.type.startsWith('audio/') || file.name.match(/\.(mp4|m4a|opus|ogg|aac|mp3)$/i)) {
       setNomeArquivo(file.name + ' (áudio — cole a transcrição abaixo)');
       setArquivo(null);
-      setErr('Áudio recebido! Cole a transcrição manualmente no campo acima. Transcrição automática chegará em breve.');
+      setErr('Áudio recebido! Cole a transcrição manualmente no campo acima.');
       return;
     }
 
-    // PDF ou imagem — comportamento original
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = reader.result.split(',')[1];
       const isPdf = file.type === 'application/pdf';
       const isImg = file.type.startsWith('image/');
-      if (isPdf) {
-        setArquivo({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } });
-      } else if (isImg) {
-        setArquivo({ type: 'image', source: { type: 'base64', media_type: file.type, data: base64 } });
-      } else {
-        setErr('Formato não suportado. Use PDF, imagem, TXT ou ZIP do WhatsApp.');
-        return;
-      }
+      if (isPdf) setArquivo({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } });
+      else if (isImg) setArquivo({ type: 'image', source: { type: 'base64', media_type: file.type, data: base64 } });
+      else { setErr('Formato não suportado. Use PDF, imagem, TXT ou ZIP do WhatsApp.'); return; }
       setNomeArquivo(file.name);
     };
     reader.readAsDataURL(file);
@@ -339,10 +496,11 @@ function ToolLead({ onSaveCRM }) {
     if (txt.trim().length < 5 && !arquivo) { setErr('Descreva o caso ou anexe um arquivo.'); return; }
     setErr(''); setLoading(true);
     try {
-      const r = await callClaude(P_ANALISE, txt || 'Analise o documento anexado.', 1500, arquivo);
+      const contexto = `${leadNome ? `Nome do lead: ${leadNome}\n` : ''}${leadCidade ? `Cidade: ${leadCidade}\n` : ''}---\n${txt || 'Analise o documento anexado.'}`;
+      const r = await callClaude(P_ANALISE, contexto, 1800, arquivo);
       setAnalysis(r);
       setHistAuto(prev => [...prev, novaEntrada('⚡', `Análise gerada — nível ${(r.nivel || '').toUpperCase()} — ${(r.violacoes || []).slice(0,2).join(', ')}`)]);
-      setStep(2);
+      setStep(3);
     } catch (e) { setErr(e.message); } finally { setLoading(false); }
   };
 
@@ -351,13 +509,13 @@ function ToolLead({ onSaveCRM }) {
     const fid = fmtId || fmt;
     setAb(id); setFmt(fid); setLoading(true); setErr('');
     try {
-      const ctx = `Nome: ${analysis.nome}\nSituação: ${analysis.situacao}\nTempo: ${analysis.tempo_empresa}\nViolações: ${(analysis.violacoes || []).join('; ')}\nFundamentos: ${(analysis.fundamentos || []).slice(0, 3).join('; ')}`;
+      const ctx = `Nome: ${analysis.nome}\nCidade: ${analysis.cidade || leadCidade || 'não informada'}\nSituação: ${analysis.situacao}\nTempo: ${analysis.tempo_empresa}\nViolações: ${(analysis.violacoes || []).join('; ')}\nFundamentos: ${(analysis.fundamentos || []).slice(0, 3).join('; ')}`;
       const r = await callClaude(P_MENSAGEM_FORMATO(ABORDAGENS.find((a) => a.id === id)?.label, INSTRUCOES[id], fid), ctx);
       setMsgs({ ...r, abId: id, fmtId: fid });
       const abLabel = ABORDAGENS.find((a) => a.id === id)?.label || id;
       const fmtLabel = FORMATOS.find((f) => f.id === fid)?.label || fid;
       setHistAuto(prev => [...prev, novaEntrada('📨', `Mensagem gerada — tom ${abLabel} · ${fmtLabel}`)]);
-      setStep(3);
+      setStep(4);
     } catch (e) { setErr(e.message); } finally { setLoading(false); }
   };
 
@@ -366,7 +524,7 @@ function ToolLead({ onSaveCRM }) {
     const entradaSalvo = novaEntrada('📥', 'Lead cadastrado no CRM');
     const novo = {
       id: Date.now(),
-      nome: analysis.nome !== 'Não informado' ? analysis.nome : 'Lead sem nome',
+      nome: analysis.nome !== 'Não informado' ? analysis.nome : (leadNome || 'Lead sem nome'),
       contato: '',
       caso: (analysis.violacoes || []).slice(0, 2).join(', '),
       stage: 'novo',
@@ -383,12 +541,122 @@ function ToolLead({ onSaveCRM }) {
       localStorage.setItem('lf_leads', JSON.stringify([novo, ...existing]));
       setSavedCRM(true);
       if (onSaveCRM) onSaveCRM();
-    } catch (e) {}
+    } catch (_) {}
   };
 
+  const resetTudo = () => {
+    setStep(0); setLeadNome(''); setLeadCidade(''); setTxt('');
+    setAnalysis(null); setMsgs(null); setArquivo(null); setNomeArquivo('');
+    setSavedCRM(false); setHistAuto([]); setErr('');
+  };
+
+  // ── STEP 0: SAUDAÇÃO ─────────────────────────────────────────────────────────
+  if (step === 0) return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '32px 16px 24px' }}>
+      <div style={{ width: 64, height: 64, background: `linear-gradient(135deg,${T.gold},#7a5810)`, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, marginBottom: 20 }}>⚖️</div>
+      <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 24, fontWeight: 700, color: T.text, margin: '0 0 10px' }}>
+        Bem-vindo ao Analisador de Leads
+      </h2>
+      <p style={{ color: T.textMuted, fontSize: 14, lineHeight: 1.7, maxWidth: 440, margin: '0 0 8px' }}>
+        Aqui você analisa o caso do seu lead com base jurídica completa — CLT, TST, OJs e Temas Repetitivos — e recebe mensagens prontas para fechar o contrato.
+      </p>
+      <p style={{ color: T.textDim, fontSize: 12, lineHeight: 1.6, maxWidth: 400, margin: '0 0 28px', fontStyle: 'italic' }}>
+        Em menos de 1 minuto você terá a análise jurídica e as abordagens de fechamento personalizadas para este lead.
+      </p>
+      <Btn onClick={() => setStep(1)} style={{ padding: '14px 32px', fontSize: 14 }}>
+        → Iniciar análise do lead
+      </Btn>
+    </div>
+  );
+
+  // ── STEP 1: COLETA DE NOME E CIDADE ──────────────────────────────────────────
   if (step === 1) return (
     <div>
-      <Title sub="Cole o relato ou anexe um arquivo — PDF, print, foto do documento.">⚡ Analisar Lead</Title>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+        <button onClick={() => setStep(0)} style={{ background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 7, padding: '6px 12px', color: T.textMuted, fontSize: 12, cursor: 'pointer' }}>← Voltar</button>
+        <Title sub="Antes de começar, informe os dados básicos do lead.">📋 Dados do Lead</Title>
+      </div>
+
+      {/* Barra de progresso */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 24 }}>
+        {['Dados', 'Relato', 'Análise', 'Fechar'].map((s, i) => (
+          <div key={s} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <div style={{ width: '100%', height: 3, borderRadius: 2, background: i === 0 ? T.gold : T.border }} />
+            <span style={{ fontSize: 9, color: i === 0 ? T.gold : T.textDim, fontFamily: 'monospace' }}>{s}</span>
+          </div>
+        ))}
+      </div>
+
+      <Card accent={T.gold}>
+        <InfoBox color={T.blue}>
+          💡 Essas informações ajudam a personalizar as mensagens de fechamento e identificar o TRT competente para o caso.
+        </InfoBox>
+
+        <div style={{ marginBottom: 14 }}>
+          <Lbl>Nome do lead</Lbl>
+          <input
+            value={leadNome}
+            onChange={(e) => setLeadNome(e.target.value)}
+            placeholder="ex: João da Silva"
+            style={inp}
+            autoFocus
+            onKeyDown={(e) => e.key === 'Enter' && setStep(2)}
+          />
+          <div style={{ fontSize: 11, color: T.textDim, marginTop: 4 }}>Opcional — mas personaliza muito as mensagens de fechamento</div>
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <Lbl>Cidade do lead</Lbl>
+          <input
+            value={leadCidade}
+            onChange={(e) => setLeadCidade(e.target.value)}
+            placeholder="ex: Londrina - PR"
+            style={inp}
+            onKeyDown={(e) => e.key === 'Enter' && setStep(2)}
+          />
+          <div style={{ fontSize: 11, color: T.textDim, marginTop: 4 }}>Permite identificar o TRT competente e jurisprudência regional aplicável</div>
+        </div>
+
+        <Btn onClick={() => setStep(2)} style={{ width: '100%', padding: 14 }}>
+          → Continuar para o relato do caso
+        </Btn>
+        <button onClick={() => setStep(2)} style={{ width: '100%', background: 'transparent', border: 'none', color: T.textDim, fontSize: 12, cursor: 'pointer', marginTop: 10, padding: 6 }}>
+          Pular esta etapa
+        </button>
+      </Card>
+    </div>
+  );
+
+  // ── STEP 2: RELATO DO CASO ────────────────────────────────────────────────────
+  if (step === 2) return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+        <button onClick={() => setStep(1)} style={{ background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 7, padding: '6px 12px', color: T.textMuted, fontSize: 12, cursor: 'pointer' }}>← Voltar</button>
+        <Title sub="Cole o relato ou anexe um arquivo — PDF, print, foto do documento.">
+          ⚡ Relato do Caso{leadNome ? ` — ${leadNome}` : ''}
+        </Title>
+      </div>
+
+      {/* Barra de progresso */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 24 }}>
+        {['Dados', 'Relato', 'Análise', 'Fechar'].map((s, i) => (
+          <div key={s} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <div style={{ width: '100%', height: 3, borderRadius: 2, background: i <= 1 ? T.gold : T.border }} />
+            <span style={{ fontSize: 9, color: i <= 1 ? T.gold : T.textDim, fontFamily: 'monospace' }}>{s}</span>
+          </div>
+        ))}
+      </div>
+
+      {leadNome && (
+        <div style={{ background: T.goldDim, border: `1px solid ${T.goldBorder}`, borderRadius: 10, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 16 }}>👤</span>
+          <div>
+            <span style={{ color: T.gold, fontSize: 13, fontWeight: 600 }}>{leadNome}</span>
+            {leadCidade && <span style={{ color: T.textMuted, fontSize: 12 }}> · {leadCidade}</span>}
+          </div>
+        </div>
+      )}
+
       <textarea value={txt} onChange={(e) => setTxt(e.target.value)} rows={7}
         placeholder="Cole aqui o relato do lead trabalhista...&#10;&#10;Ex: 'Fui demitido depois de 6 anos sem receber horas extras...'"
         style={{ ...inp, resize: 'vertical', lineHeight: 1.7, fontSize: 14, padding: 16 }}
@@ -396,17 +664,12 @@ function ToolLead({ onSaveCRM }) {
         onBlur={(e) => (e.target.style.borderColor = T.border)} />
       <div style={{ textAlign: 'right', fontSize: 11, color: T.textDim, fontFamily: 'monospace', margin: '4px 0 12px' }}>{txt.length} caracteres</div>
 
-      {/* ANEXO */}
       <label style={{ display: 'flex', alignItems: 'center', gap: 10, background: nomeArquivo ? T.greenBg : T.surface, border: `1px solid ${nomeArquivo ? T.green : T.border}`, borderRadius: 10, padding: '12px 16px', cursor: 'pointer', marginBottom: 14, transition: 'all 0.2s' }}>
         <input type="file" accept=".pdf,.zip,.txt,.mp4,.m4a,.opus,.ogg,.aac,.mp3,image/*" onChange={handleArquivo} style={{ display: 'none' }} />
         <span style={{ fontSize: 18 }}>{nomeArquivo ? '✓' : '📎'}</span>
         <div>
-          <div style={{ color: nomeArquivo ? T.green : T.text, fontSize: 13, fontWeight: 600 }}>
-            {nomeArquivo || 'Anexar arquivo — PDF, imagem ou ZIP do WhatsApp'}
-          </div>
-          <div style={{ color: T.textMuted, fontSize: 11, marginTop: 2 }}>
-            {nomeArquivo ? 'Arquivo pronto para análise' : 'ZIP do WhatsApp, PDF, print, áudio (.mp4/.opus/.m4a)...'}
-          </div>
+          <div style={{ color: nomeArquivo ? T.green : T.text, fontSize: 13, fontWeight: 600 }}>{nomeArquivo || 'Anexar arquivo — PDF, imagem ou ZIP do WhatsApp'}</div>
+          <div style={{ color: T.textMuted, fontSize: 11, marginTop: 2 }}>{nomeArquivo ? 'Arquivo pronto para análise' : 'ZIP do WhatsApp, PDF, print, áudio (.mp4/.opus/.m4a)...'}</div>
         </div>
         {nomeArquivo && (
           <button onClick={(e) => { e.preventDefault(); setArquivo(null); setNomeArquivo(''); }}
@@ -421,19 +684,37 @@ function ToolLead({ onSaveCRM }) {
     </div>
   );
 
-  if (step === 2 && analysis) {
+  // ── STEP 3: RESULTADO DA ANÁLISE ──────────────────────────────────────────────
+  if (step === 3 && analysis) {
     const nv = analysis.nivel?.toLowerCase();
     return (
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-          <button onClick={() => setStep(1)} style={{ background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 7, padding: '6px 12px', color: T.textMuted, fontSize: 12, cursor: 'pointer' }}>← Voltar</button>
-          <Title sub="Análise jurídica completa com base na CLT, TST e CF/88.">Análise do Caso</Title>
+          <button onClick={() => setStep(2)} style={{ background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 7, padding: '6px 12px', color: T.textMuted, fontSize: 12, cursor: 'pointer' }}>← Voltar</button>
+          <Title sub="Análise jurídica completa com base na CLT, TST, OJs e Temas Repetitivos.">Análise do Caso</Title>
         </div>
+
+        {/* Barra de progresso */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 24 }}>
+          {['Dados', 'Relato', 'Análise', 'Fechar'].map((s, i) => (
+            <div key={s} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: '100%', height: 3, borderRadius: 2, background: i <= 2 ? T.gold : T.border }} />
+              <span style={{ fontSize: 9, color: i <= 2 ? T.gold : T.textDim, fontFamily: 'monospace' }}>{s}</span>
+            </div>
+          ))}
+        </div>
+
         <Card>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
-            {[['Lead', analysis.nome], ['Situação', analysis.situacao], ['Tempo', analysis.tempo_empresa], ['Salário est.', analysis.salario_estimado]].map(([k, v]) => (
+            {[['Lead', analysis.nome], ['Cidade', analysis.cidade || leadCidade || 'Não informada'], ['Situação', analysis.situacao], ['Tempo', analysis.tempo_empresa], ['Salário est.', analysis.salario_estimado]].map(([k, v]) => (
               <div key={k}><Lbl>{k}</Lbl><div style={{ color: T.text, fontSize: 13 }}>{v || 'Não informado'}</div></div>
             ))}
+            {analysis.trt_aplicavel && (
+              <div style={{ gridColumn: '1/-1' }}>
+                <Lbl>TRT Competente</Lbl>
+                <div style={{ color: T.blue, fontSize: 13, fontWeight: 600 }}>{analysis.trt_aplicavel}</div>
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: NB[nv] || T.surface, borderRadius: 8, marginBottom: 14 }}>
             <Tag color={NC[nv] || T.textMuted} bg={NB[nv]}>{(analysis.nivel || '').toUpperCase()}</Tag>
@@ -443,12 +724,22 @@ function ToolLead({ onSaveCRM }) {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
             {(analysis.violacoes || []).map((v, i) => <Tag key={i} color={T.gold}>{v}</Tag>)}
           </div>
-          <Lbl>Fundamentos Jurídicos</Lbl>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 14 }}>
+          <Lbl>Fundamentos Jurídicos — TST / CLT / CF</Lbl>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: analysis.sumulas_trt?.length ? 10 : 14 }}>
             {(analysis.fundamentos || []).map((f, i) => (
               <div key={i} style={{ background: T.surface, borderRadius: 6, padding: '6px 10px', color: T.textMuted, fontSize: 12, fontFamily: 'monospace' }}>{f}</div>
             ))}
           </div>
+          {(analysis.sumulas_trt || []).length > 0 && (
+            <>
+              <Lbl>Jurisprudência Regional — {analysis.trt_aplicavel || 'TRT'}</Lbl>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 14 }}>
+                {(analysis.sumulas_trt || []).map((s, i) => (
+                  <div key={i} style={{ background: T.blueBg, borderRadius: 6, padding: '6px 10px', color: T.blue, fontSize: 12, fontFamily: 'monospace', border: `1px solid ${T.blue}20` }}>{s}</div>
+                ))}
+              </div>
+            </>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
               <Lbl>Provas Mencionadas</Lbl>
@@ -461,12 +752,14 @@ function ToolLead({ onSaveCRM }) {
             </div>
           </div>
         </Card>
+
         {analysis.prescricao_alerta && analysis.prescricao_alerta !== 'null' && (
           <InfoBox color={T.red}>⏰ <strong>Prescrição:</strong> {analysis.prescricao_alerta}</InfoBox>
         )}
         {analysis.alerta_risco && analysis.alerta_risco !== 'null' && (
           <InfoBox color={T.yellow}>⚠ <strong>Risco:</strong> {analysis.alerta_risco}</InfoBox>
         )}
+
         <Card style={{ background: T.surface }}>
           <Lbl>🎯 Escolha a abordagem de fechamento</Lbl>
           <p style={{ color: T.textMuted, fontSize: 12, margin: '0 0 12px', lineHeight: 1.5 }}>Cada abordagem gera mensagens completamente diferentes. Escolha com base no perfil do lead.</p>
@@ -509,12 +802,24 @@ function ToolLead({ onSaveCRM }) {
     );
   }
 
-  if (step === 3 && msgs) {
+  // ── STEP 4: MENSAGENS ──────────────────────────────────────────────────────────
+  if (step === 4 && msgs) {
     const abObj = ABORDAGENS.find((a) => a.id === msgs.abId);
     const fmtObj = FORMATOS.find((f) => f.id === msgs.fmtId);
     return (
       <div>
         <Title sub="Copie e cole no canal escolhido.">Mensagem Pronta ✓</Title>
+
+        {/* Barra de progresso */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+          {['Dados', 'Relato', 'Análise', 'Fechar'].map((s, i) => (
+            <div key={s} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: '100%', height: 3, borderRadius: 2, background: T.gold }} />
+              <span style={{ fontSize: 9, color: T.gold, fontFamily: 'monospace' }}>{s}</span>
+            </div>
+          ))}
+        </div>
+
         {abObj && fmtObj && (
           <InfoBox color={abObj.cor}>
             {fmtObj.icon} <strong>{fmtObj.label}</strong> · tom {abObj.icon} <strong>{abObj.label}</strong> — {abObj.desc}
@@ -533,7 +838,9 @@ function ToolLead({ onSaveCRM }) {
           <Lbl>◆ Por que essa combinação fecha</Lbl>
           <p style={{ color: T.green, fontSize: 13, margin: 0, lineHeight: 1.7, fontStyle: 'italic' }}>{msgs.por_que_fecha}</p>
         </Card>
+
         <BtnSalvarCRM savedCRM={savedCRM} onSave={salvarCRM} />
+
         <Card style={{ background: T.surface }}>
           <Lbl>Testar outra combinação — mesmo lead</Lbl>
           <div style={{ marginBottom: 10 }}>
@@ -563,25 +870,28 @@ function ToolLead({ onSaveCRM }) {
             </div>
           </div>
         </Card>
-        {/* FUNIL — PRÓXIMA ETAPA: OBJEÇÕES */}
+
         <div style={{ background: T.surface, border: `1px solid ${T.goldBorder}`, borderRadius: 12, padding: '16px 18px', marginTop: 8 }}>
           <div style={{ fontSize: 11, color: T.gold, fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 10 }}>◆ PRÓXIMA ETAPA DO FUNIL</div>
           <p style={{ color: T.textMuted, fontSize: 12, margin: '0 0 12px', lineHeight: 1.5 }}>
             O cliente vai levantar objeções. Antecipe com respostas prontas baseadas no perfil deste lead.
           </p>
-          <Btn onClick={() => setStep(4)} style={{ width: '100%', padding: 12 }}>
+          <Btn onClick={() => setStep(5)} style={{ width: '100%', padding: 12 }}>
             🛡️ Gerar Respostas para Objeções deste Lead →
           </Btn>
         </div>
-        <Btn variant="ghost" onClick={() => { setStep(1); setTxt(''); setAnalysis(null); setMsgs(null); setArquivo(null); setNomeArquivo(''); setSavedCRM(false); setHistAuto([]); }} style={{ width: '100%', marginTop: 4 }}>
+        <Btn variant="ghost" onClick={resetTudo} style={{ width: '100%', marginTop: 4 }}>
           + Analisar novo lead
         </Btn>
       </div>
     );
   }
 
-  if (step === 4 && analysis) {
-    return <ToolObjecoesLead analysis={analysis} savedCRM={savedCRM} onSaveCRM={salvarCRM} onRegistrarHist={(e) => setHistAuto(prev => [...prev, e])} onBack={() => setStep(3)} onNovoLead={() => { setStep(1); setTxt(''); setAnalysis(null); setMsgs(null); setArquivo(null); setNomeArquivo(''); setSavedCRM(false); setHistAuto([]); }} />;
+  // ── STEP 5: OBJEÇÕES ──────────────────────────────────────────────────────────
+  if (step === 5 && analysis) {
+    return <ToolObjecoesLead analysis={analysis} savedCRM={savedCRM} onSaveCRM={salvarCRM}
+      onRegistrarHist={(e) => setHistAuto(prev => [...prev, e])}
+      onBack={() => setStep(4)} onNovoLead={resetTudo} />;
   }
 
   return null;
@@ -597,6 +907,7 @@ function ToolObjecoesLead({ analysis, savedCRM, onSaveCRM, onRegistrarHist, onBa
     setLoading(true); setErr('');
     try {
       const ctx = `Lead: ${analysis.nome || 'Não informado'}
+Cidade: ${analysis.cidade || 'não informada'}
 Situação: ${analysis.situacao || ''}
 Tempo de empresa: ${analysis.tempo_empresa || ''}
 Violações: ${(analysis.violacoes || []).join(', ')}
@@ -665,11 +976,11 @@ Retorne SOMENTE JSON no formato:
 
 // ─── 2. CRM ───────────────────────────────────────────────────────────────────
 const STAGES = [
-  { id: 'novo', label: 'Novo Lead', cor: T.textMuted },
-  { id: 'contato', label: 'Contato Feito', cor: T.blue },
-  { id: 'consulta', label: 'Consulta Agendada', cor: T.yellow },
-  { id: 'fechado', label: 'Fechado ✓', cor: T.green },
-  { id: 'perdido', label: 'Perdido', cor: T.red },
+  { id: 'novo',     label: 'Novo Lead',           cor: T.textMuted },
+  { id: 'contato',  label: 'Contato Feito',        cor: T.blue },
+  { id: 'consulta', label: 'Consulta Agendada',    cor: T.yellow },
+  { id: 'fechado',  label: 'Fechado ✓',            cor: T.green },
+  { id: 'perdido',  label: 'Perdido',              cor: T.red },
 ];
 const DOCS = [
   'CTPS', 'Contracheques (últimos 12m)', 'Extrato FGTS', 'Termo de Rescisão / TRCT',
@@ -759,16 +1070,9 @@ function Ficha({ lead, onBack, onSave, onDel }) {
       <Card accent={f.reuniao_data ? T.blue : undefined}>
         <Lbl>📅 Próxima Reunião</Lbl>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-          <div>
-            <Lbl>Data</Lbl>
-            <input type="date" value={f.reuniao_data || ''} onChange={(e) => up('reuniao_data', e.target.value)} style={inp} />
-          </div>
-          <div>
-            <Lbl>Hora</Lbl>
-            <input type="time" value={f.reuniao_hora || ''} onChange={(e) => up('reuniao_hora', e.target.value)} style={inp} />
-          </div>
-          <div>
-            <Lbl>Tipo</Lbl>
+          <div><Lbl>Data</Lbl><input type="date" value={f.reuniao_data || ''} onChange={(e) => up('reuniao_data', e.target.value)} style={inp} /></div>
+          <div><Lbl>Hora</Lbl><input type="time" value={f.reuniao_hora || ''} onChange={(e) => up('reuniao_hora', e.target.value)} style={inp} /></div>
+          <div><Lbl>Tipo</Lbl>
             <select value={f.reuniao_tipo || 'video'} onChange={(e) => up('reuniao_tipo', e.target.value)} style={sel}>
               <option value="video">📹 Vídeo (Meet/Zoom)</option>
               <option value="presencial">🏢 Presencial</option>
@@ -776,10 +1080,7 @@ function Ficha({ lead, onBack, onSave, onDel }) {
               <option value="whatsapp">💬 WhatsApp</option>
             </select>
           </div>
-          <div>
-            <Lbl>Observação</Lbl>
-            <input value={f.reuniao_obs || ''} onChange={(e) => up('reuniao_obs', e.target.value)} placeholder="ex: trazer CTPS e holerites" style={inp} />
-          </div>
+          <div><Lbl>Observação</Lbl><input value={f.reuniao_obs || ''} onChange={(e) => up('reuniao_obs', e.target.value)} placeholder="ex: trazer CTPS e holerites" style={inp} /></div>
         </div>
         {f.reuniao_data && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -811,7 +1112,7 @@ function Ficha({ lead, onBack, onSave, onDel }) {
               {i < (f.hist || []).length - 1 && <div style={{ width: 1, flex: 1, background: T.border, minHeight: 10, marginTop: 3 }} />}
             </div>
             <div style={{ paddingBottom: 8, flex: 1 }}>
-              <div style={{ color: h.auto ? T.text : T.text, fontSize: 13, lineHeight: 1.5 }}>{h.txt}</div>
+              <div style={{ color: T.text, fontSize: 13, lineHeight: 1.5 }}>{h.txt}</div>
               <div style={{ color: T.textDim, fontSize: 11, fontFamily: 'monospace', marginTop: 2 }}>{h.data} às {h.hora}{h.auto ? '' : ' · manual'}</div>
             </div>
           </div>
@@ -830,17 +1131,11 @@ function ToolCRM() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    try {
-      const d = localStorage.getItem('lf_leads');
-      if (d) setLeads(JSON.parse(d));
-    } catch (e) {}
+    try { const d = localStorage.getItem('lf_leads'); if (d) setLeads(JSON.parse(d)); } catch (_) {}
     setLoaded(true);
   }, []);
 
-  const save = (nl) => {
-    setLeads(nl);
-    try { localStorage.setItem('lf_leads', JSON.stringify(nl)); } catch (e) {}
-  };
+  const save = (nl) => { setLeads(nl); try { localStorage.setItem('lf_leads', JSON.stringify(nl)); } catch (_) {} };
   const addLead = () => {
     if (!form.nome.trim()) return;
     save([{ id: Date.now(), ...form, docs: [], hist: [], createdAt: new Date().toLocaleDateString('pt-BR') }, ...leads]);
@@ -963,13 +1258,13 @@ function ToolCRM() {
 
 // ─── 3. QUEBRADOR DE OBJEÇÕES ─────────────────────────────────────────────────
 const OBJECOES = [
-  { id: 'pensar', label: '"Vou pensar e te aviso"' },
+  { id: 'pensar',   label: '"Vou pensar e te aviso"' },
   { id: 'dinheiro', label: '"Não tenho dinheiro agora"' },
-  { id: 'medo', label: '"Tenho medo de perder o emprego"' },
-  { id: 'vale', label: '"Será que vale a pena processar?"' },
-  { id: 'tempo', label: '"Não tenho tempo pra isso"' },
-  { id: 'empresa', label: '"A empresa é boa, não quero problemas"' },
-  { id: 'outro', label: 'Outra objeção...' },
+  { id: 'medo',     label: '"Tenho medo de perder o emprego"' },
+  { id: 'vale',     label: '"Será que vale a pena processar?"' },
+  { id: 'tempo',    label: '"Não tenho tempo pra isso"' },
+  { id: 'empresa',  label: '"A empresa é boa, não quero problemas"' },
+  { id: 'outro',    label: 'Outra objeção...' },
 ];
 
 function ToolObjecoes() {
@@ -979,17 +1274,14 @@ function ToolObjecoes() {
   const [res, setRes] = useState(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
-
   const obTxt = obId === 'outro' ? custom : OBJECOES.find((o) => o.id === obId)?.label || '';
 
   const gerar = async () => {
     if (!obId) { setErr('Selecione uma objeção.'); return; }
     if (obId === 'outro' && !custom.trim()) { setErr('Digite a objeção.'); return; }
     setErr(''); setLoading(true);
-    try {
-      const r = await callClaude(P_OBJECAO, `Objeção: ${obTxt}\n${ctx ? `Contexto do caso: ${ctx}` : ''}`);
-      setRes(r);
-    } catch (e) { setErr(e.message); } finally { setLoading(false); }
+    try { const r = await callClaude(P_OBJECAO, `Objeção: ${obTxt}\n${ctx ? `Contexto do caso: ${ctx}` : ''}`); setRes(r); }
+    catch (e) { setErr(e.message); } finally { setLoading(false); }
   };
 
   return (
@@ -1093,10 +1385,15 @@ function ToolCalc() {
       const ctx = `Salário: R$${f.sal}\nMeses: ${f.meses}\nTipo: ${f.tipo}\nVerbas calculadas: ${res.items.map((i) => i.nome + ': R$' + i.valor.toFixed(2)).join(', ')}`;
       const r = await callClaude(P_VERBAS_IA, ctx, 800);
       setAlerta(r);
-    } catch (e) {} finally { setLoadingAI(false); }
+    } catch (_) {} finally { setLoadingAI(false); }
   };
 
-  const tipos = [{ id: 'sjc', label: 'Sem justa causa' }, { id: 'cjc', label: 'Com justa causa' }, { id: 'ri', label: 'Rescisão indireta (art. 483 CLT)' }, { id: 'pe', label: 'Pedido de demissão' }];
+  const tipos = [
+    { id: 'sjc', label: 'Sem justa causa' },
+    { id: 'cjc', label: 'Com justa causa' },
+    { id: 'ri',  label: 'Rescisão indireta (art. 483 CLT)' },
+    { id: 'pe',  label: 'Pedido de demissão' },
+  ];
 
   return (
     <div>
@@ -1178,20 +1475,16 @@ function ToolContrato() {
       reader.onload = () => { setModeloProprio(reader.result.slice(0, 6000)); setNomeModelo(file.name); };
       reader.readAsText(file, 'UTF-8');
     } else {
-      // Para .docx, extrai o texto bruto como fallback
       const reader = new FileReader();
       reader.onload = () => {
         try {
           const text = reader.result;
-          // tenta extrair texto legível do docx (xml dentro do zip)
           const match = text.match(/<w:t[^>]*>([^<]+)<\/w:t>/g);
           if (match) {
             const extracted = match.map(m => m.replace(/<[^>]+>/g, '')).join(' ');
             setModeloProprio(extracted.slice(0, 6000));
             setNomeModelo(file.name + ' (texto extraído)');
-          } else {
-            setNomeModelo(file.name + ' — use .txt para melhor resultado');
-          }
+          } else { setNomeModelo(file.name + ' — use .txt para melhor resultado'); }
         } catch(_) { setNomeModelo(file.name + ' — use .txt para melhor resultado'); }
       };
       reader.readAsText(file);
@@ -1248,7 +1541,6 @@ Retorne SOMENTE JSON: {"contrato":"texto integral com \n para quebras de linha"}
             </div>
             {f.tipo === 'misto' && <div><Lbl>Valor entrada (R$)</Lbl><input value={f.honorarios} onChange={(e) => up('honorarios', e.target.value)} placeholder="ex: 500" type="number" style={inp} /></div>}
           </div>
-          {/* MODELO PRÓPRIO */}
           <div style={{ gridColumn: '1/-1' }}>
             <Lbl>Modelo próprio (opcional)</Lbl>
             <label style={{ display: 'flex', alignItems: 'center', gap: 10, background: nomeModelo ? T.greenBg : T.surface, border: `1px solid ${nomeModelo ? T.green : T.border}`, borderRadius: 9, padding: '11px 14px', cursor: 'pointer', transition: 'all 0.2s' }}>
@@ -1262,7 +1554,7 @@ Retorne SOMENTE JSON: {"contrato":"texto integral com \n para quebras de linha"}
             </label>
           </div>
           <Err msg={err} />
-          <Btn onClick={gerar} disabled={loading} style={{ width: '100%', padding: 13 }}>{loading ? '⏳ Gerando contrato...' : nomeModelo ? '→ Gerar com Meu Modelo' : '→ Gerar Contrato de Honorários'}</Btn>
+          <Btn onClick={gerar} disabled={loading} style={{ width: '100%', padding: 13, marginTop: 12 }}>{loading ? '⏳ Gerando contrato...' : nomeModelo ? '→ Gerar com Meu Modelo' : '→ Gerar Contrato de Honorários'}</Btn>
         </Card>
       ) : (
         <>
@@ -1288,6 +1580,75 @@ const TEMAS = [
   'Desvio de função', 'Intervalo intrajornada suprimido', 'Rescisão indireta (art. 483 CLT)', 'Outro tema...',
 ];
 
+const TEMAS_IMG = [
+  'Demissão sem justa causa', 'Horas extras não pagas', 'Assédio moral',
+  'FGTS não depositado', 'Trabalho sem carteira assinada', 'Acidente de trabalho',
+  'Rescisão indireta', 'Equiparação salarial', 'Seus direitos trabalhistas',
+];
+
+const ESTILOS_IMG = [
+  { id: 'educativo',    label: '📚 Educativo',    desc: 'Explica um direito trabalhista' },
+  { id: 'alerta',       label: '⚠️ Alerta',        desc: 'Chama atenção para um risco' },
+  { id: 'motivacional', label: '💪 Motivacional',  desc: 'Encoraja a buscar direitos' },
+  { id: 'pergunta',     label: '❓ Pergunta',       desc: 'Engaja com uma dúvida comum' },
+];
+
+function desenharCanvasPresenca(post, formato, nome) {
+  const canvas = document.getElementById('postCanvasPresenca');
+  if (!canvas || !post) return;
+  const size = 600;
+  const height = formato === 'feed' ? 600 : 1067;
+  canvas.width = size; canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, size, height);
+  grad.addColorStop(0, post.cor_fundo || '#0a1628');
+  grad.addColorStop(1, '#060d1a');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, size, height);
+  const barGrad = ctx.createLinearGradient(0, 0, size, 0);
+  barGrad.addColorStop(0, 'transparent');
+  barGrad.addColorStop(0.5, post.cor_destaque || '#c9a84c');
+  barGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = barGrad; ctx.fillRect(0, 0, size, 4);
+  ctx.font = formato === 'feed' ? '80px serif' : '100px serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(post.emoji_principal || '⚖️', size/2, formato === 'feed' ? 120 : 160);
+  ctx.fillStyle = post.cor_destaque || '#c9a84c';
+  ctx.font = `bold ${formato === 'feed' ? '36px' : '42px'} Arial`;
+  wrapCanvasText(ctx, (post.titulo || '').toUpperCase(), size/2, formato === 'feed' ? 190 : 290, size - 80, formato === 'feed' ? 42 : 50);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `${formato === 'feed' ? '18px' : '22px'} Arial`;
+  wrapCanvasText(ctx, post.subtitulo || '', size/2, formato === 'feed' ? 260 : 390, size - 100, formato === 'feed' ? 26 : 30);
+  const lineY = formato === 'feed' ? 295 : 440;
+  ctx.strokeStyle = (post.cor_destaque || '#c9a84c') + '66';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(60, lineY); ctx.lineTo(size - 60, lineY); ctx.stroke();
+  ctx.fillStyle = '#c8d8ee';
+  ctx.font = `${formato === 'feed' ? '15px' : '18px'} Arial`;
+  wrapCanvasText(ctx, post.corpo || '', size/2, formato === 'feed' ? 330 : 490, size - 80, formato === 'feed' ? 22 : 28);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `bold ${formato === 'feed' ? '14px' : '17px'} Arial`;
+  ctx.fillText('👉 ' + (post.cta || ''), size/2, formato === 'feed' ? 440 : 700);
+  ctx.fillStyle = post.cor_destaque || '#c9a84c';
+  ctx.font = `bold ${formato === 'feed' ? '13px' : '16px'} Arial`;
+  ctx.fillText(nome || 'Dr. Advogado', size/2, formato === 'feed' ? 490 : 800);
+  ctx.fillStyle = '#3a5a7a';
+  ctx.font = `${formato === 'feed' ? '10px' : '13px'} Arial`;
+  ctx.fillText((post.hashtags || []).map(h => '#' + h).join(' '), size/2, formato === 'feed' ? 520 : 860);
+  ctx.fillStyle = barGrad; ctx.fillRect(0, height - 4, size, 4);
+}
+
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = (text || '').split(' ');
+  let line = '', cy = y;
+  for (let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + ' ';
+    if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+      ctx.fillText(line, x, cy); line = words[n] + ' '; cy += lineHeight;
+    } else { line = testLine; }
+  }
+  ctx.fillText(line, x, cy);
+}
+
 function ToolPresenca() {
   const [mod, setMod] = useState('conteudo');
   const [res, setRes] = useState(null);
@@ -1302,7 +1663,6 @@ function ToolPresenca() {
   const [cidadeAnuncio, setCidadeAnuncio] = useState('');
   const [nomeEx, setNomeEx] = useState('');
   const [casoEx, setCasoEx] = useState('');
-  // estados do gerador de imagens
   const [imgTema, setImgTema] = useState('');
   const [imgTemaCustom, setImgTemaCustom] = useState('');
   const [imgEstilo, setImgEstilo] = useState('educativo');
@@ -1340,10 +1700,10 @@ function ToolPresenca() {
   };
 
   const mods = [
-    { id: 'conteudo', icon: '✍️', label: 'Conteúdo', desc: 'Post educativo para redes sociais' },
-    { id: 'anuncio', icon: '📢', label: 'Anúncio', desc: 'Google Ads ou Meta Ads' },
+    { id: 'conteudo',  icon: '✍️', label: 'Conteúdo', desc: 'Post educativo para redes sociais' },
+    { id: 'anuncio',   icon: '📢', label: 'Anúncio',  desc: 'Google Ads ou Meta Ads' },
     { id: 'indicacao', icon: '🤝', label: 'Indicação', desc: 'Reativar ex-clientes' },
-    { id: 'imagem', icon: '🖼️', label: 'Imagem IA', desc: 'Posts e stories prontos' },
+    { id: 'imagem',    icon: '🖼️', label: 'Imagem IA', desc: 'Posts e stories prontos' },
   ];
 
   return (
@@ -1485,7 +1845,6 @@ function ToolPresenca() {
         </>
       )}
 
-      {/* ── GERADOR DE IMAGENS IA ── */}
       {mod === 'imagem' && !imgPost && (
         <Card>
           <Lbl>Tema do post</Lbl>
@@ -1493,9 +1852,7 @@ function ToolPresenca() {
             <option value="">Selecione o tema...</option>
             {[...TEMAS_IMG, 'Outro...'].map(t => <option key={t} value={t}>{t}</option>)}
           </select>
-          {imgTema === 'Outro...' && (
-            <input value={imgTemaCustom} onChange={e => setImgTemaCustom(e.target.value)} placeholder="Digite o tema..." style={{ ...inp, marginBottom: 10 }} />
-          )}
+          {imgTema === 'Outro...' && <input value={imgTemaCustom} onChange={e => setImgTemaCustom(e.target.value)} placeholder="Digite o tema..." style={{ ...inp, marginBottom: 10 }} />}
           <Lbl style={{ marginTop: 10 }}>Estilo</Lbl>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
             {ESTILOS_IMG.map(e => (
@@ -1572,81 +1929,7 @@ function ToolPresenca() {
   );
 }
 
-// ─── BLOCO IMAGEM DENTRO DE PRESENÇA (referenciado no mod imagem de ToolPresenca) ─
-// Funções auxiliares de canvas usadas por ToolPresenca no mod imagem
-function desenharCanvasPresenca(post, formato, nome) {
-  const canvas = document.getElementById('postCanvasPresenca');
-  if (!canvas || !post) return;
-  const size = 600;
-  const height = formato === 'feed' ? 600 : 1067;
-  canvas.width = size;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  const grad = ctx.createLinearGradient(0, 0, size, height);
-  grad.addColorStop(0, post.cor_fundo || '#0a1628');
-  grad.addColorStop(1, '#060d1a');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, size, height);
-  const barGrad = ctx.createLinearGradient(0, 0, size, 0);
-  barGrad.addColorStop(0, 'transparent');
-  barGrad.addColorStop(0.5, post.cor_destaque || '#c9a84c');
-  barGrad.addColorStop(1, 'transparent');
-  ctx.fillStyle = barGrad;
-  ctx.fillRect(0, 0, size, 4);
-  ctx.font = formato === 'feed' ? '80px serif' : '100px serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(post.emoji_principal || '⚖️', size/2, formato === 'feed' ? 120 : 160);
-  ctx.fillStyle = post.cor_destaque || '#c9a84c';
-  ctx.font = `bold ${formato === 'feed' ? '36px' : '42px'} Arial`;
-  wrapCanvasText(ctx, (post.titulo || '').toUpperCase(), size/2, formato === 'feed' ? 190 : 290, size - 80, formato === 'feed' ? 42 : 50);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `${formato === 'feed' ? '18px' : '22px'} Arial`;
-  wrapCanvasText(ctx, post.subtitulo || '', size/2, formato === 'feed' ? 260 : 390, size - 100, formato === 'feed' ? 26 : 30);
-  const lineY = formato === 'feed' ? 295 : 440;
-  ctx.strokeStyle = (post.cor_destaque || '#c9a84c') + '66';
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(60, lineY); ctx.lineTo(size - 60, lineY); ctx.stroke();
-  ctx.fillStyle = '#c8d8ee';
-  ctx.font = `${formato === 'feed' ? '15px' : '18px'} Arial`;
-  wrapCanvasText(ctx, post.corpo || '', size/2, formato === 'feed' ? 330 : 490, size - 80, formato === 'feed' ? 22 : 28);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `bold ${formato === 'feed' ? '14px' : '17px'} Arial`;
-  ctx.fillText('👉 ' + (post.cta || ''), size/2, formato === 'feed' ? 440 : 700);
-  ctx.fillStyle = post.cor_destaque || '#c9a84c';
-  ctx.font = `bold ${formato === 'feed' ? '13px' : '16px'} Arial`;
-  ctx.fillText(nome || 'Dr. Advogado', size/2, formato === 'feed' ? 490 : 800);
-  ctx.fillStyle = '#3a5a7a';
-  ctx.font = `${formato === 'feed' ? '10px' : '13px'} Arial`;
-  ctx.fillText((post.hashtags || []).map(h => '#' + h).join(' '), size/2, formato === 'feed' ? 520 : 860);
-  ctx.fillStyle = barGrad;
-  ctx.fillRect(0, height - 4, size, 4);
-}
-function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
-  const words = (text || '').split(' ');
-  let line = '', cy = y;
-  for (let n = 0; n < words.length; n++) {
-    const testLine = line + words[n] + ' ';
-    if (ctx.measureText(testLine).width > maxWidth && n > 0) {
-      ctx.fillText(line, x, cy); line = words[n] + ' '; cy += lineHeight;
-    } else { line = testLine; }
-  }
-  ctx.fillText(line, x, cy);
-}
-
-// ─── 7. GERADOR DE IMAGENS ───────────────────────────────────────────────────
-const TEMAS_IMG = [
-  'Demissão sem justa causa', 'Horas extras não pagas', 'Assédio moral',
-  'FGTS não depositado', 'Trabalho sem carteira assinada', 'Acidente de trabalho',
-  'Rescisão indireta', 'Equiparação salarial', 'Seus direitos trabalhistas',
-];
-
-const ESTILOS_IMG = [
-  { id: 'educativo', label: '📚 Educativo', desc: 'Explica um direito trabalhista' },
-  { id: 'alerta', label: '⚠️ Alerta', desc: 'Chama atenção para um risco' },
-  { id: 'motivacional', label: '💪 Motivacional', desc: 'Encoraja a buscar direitos' },
-  { id: 'pergunta', label: '❓ Pergunta', desc: 'Engaja com uma dúvida comum' },
-];
-
+// ─── 7. GERADOR DE IMAGENS ────────────────────────────────────────────────────
 function ToolImagens() {
   const [tema, setTema] = useState('');
   const [temaCustom, setTemaCustom] = useState('');
@@ -1671,16 +1954,7 @@ Nome do advogado: ${nome || 'Dr. Advogado'}
 Formato: ${formato === 'feed' ? 'Post quadrado (feed)' : 'Story vertical'}
 
 Retorne SOMENTE JSON:
-{
-  "titulo": "título impactante (max 6 palavras)",
-  "subtitulo": "subtítulo (max 10 palavras)",
-  "corpo": "texto principal (2-3 linhas, direto e educativo)",
-  "cta": "chamada para ação (max 8 palavras, sem prometer resultado)",
-  "hashtags": ["tag1","tag2","tag3","tag4","tag5"],
-  "cor_fundo": "código hex escuro ex: #0a1628",
-  "cor_destaque": "código hex dourado ou vibrante ex: #c9a84c",
-  "emoji_principal": "1 emoji que representa o tema"
-}`;
+{"titulo":"título impactante (max 6 palavras)","subtitulo":"subtítulo (max 10 palavras)","corpo":"texto principal (2-3 linhas, direto e educativo)","cta":"chamada para ação (max 8 palavras, sem prometer resultado)","hashtags":["tag1","tag2","tag3","tag4","tag5"],"cor_fundo":"código hex escuro ex: #0a1628","cor_destaque":"código hex dourado ou vibrante ex: #c9a84c","emoji_principal":"1 emoji que representa o tema"}`;
       const r = await callClaude(prompt, t, 1000);
       setPost(r);
     } catch(e) { setErr(e.message); } finally { setLoading(false); }
@@ -1698,104 +1972,49 @@ Retorne SOMENTE JSON:
   const desenharCanvas = (p) => {
     const canvas = document.getElementById('postCanvas');
     if (!canvas || !p) return;
-    const size = formato === 'feed' ? 600 : 600;
+    const size = 600;
     const height = formato === 'feed' ? 600 : 1067;
-    canvas.width = size;
-    canvas.height = height;
+    canvas.width = size; canvas.height = height;
     const ctx = canvas.getContext('2d');
-
-    // Fundo
     const grad = ctx.createLinearGradient(0, 0, size, height);
     grad.addColorStop(0, p.cor_fundo || '#0a1628');
     grad.addColorStop(1, '#060d1a');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, size, height);
-
-    // Barra topo
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, size, height);
     const barGrad = ctx.createLinearGradient(0, 0, size, 0);
     barGrad.addColorStop(0, 'transparent');
     barGrad.addColorStop(0.5, p.cor_destaque || '#c9a84c');
     barGrad.addColorStop(1, 'transparent');
-    ctx.fillStyle = barGrad;
-    ctx.fillRect(0, 0, size, 4);
-
-    // Emoji principal
+    ctx.fillStyle = barGrad; ctx.fillRect(0, 0, size, 4);
     ctx.font = formato === 'feed' ? '80px serif' : '100px serif';
     ctx.textAlign = 'center';
     ctx.fillText(p.emoji_principal || '⚖️', size/2, formato === 'feed' ? 120 : 160);
-
-    // Título
     ctx.fillStyle = p.cor_destaque || '#c9a84c';
     ctx.font = `bold ${formato === 'feed' ? '36px' : '42px'} Arial`;
     ctx.textAlign = 'center';
-    const titleY = formato === 'feed' ? 190 : 290;
-    wrapText(ctx, (p.titulo || '').toUpperCase(), size/2, titleY, size - 80, formato === 'feed' ? 42 : 50);
-
-    // Subtítulo
+    wrapCanvasText(ctx, (p.titulo || '').toUpperCase(), size/2, formato === 'feed' ? 190 : 290, size - 80, formato === 'feed' ? 42 : 50);
     ctx.fillStyle = '#ffffff';
     ctx.font = `${formato === 'feed' ? '18px' : '22px'} Arial`;
-    const subY = formato === 'feed' ? 260 : 390;
-    wrapText(ctx, p.subtitulo || '', size/2, subY, size - 100, formato === 'feed' ? 26 : 30);
-
-    // Linha separadora
+    wrapCanvasText(ctx, p.subtitulo || '', size/2, formato === 'feed' ? 260 : 390, size - 100, formato === 'feed' ? 26 : 30);
     const lineY = formato === 'feed' ? 295 : 440;
     ctx.strokeStyle = (p.cor_destaque || '#c9a84c') + '66';
     ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(60, lineY);
-    ctx.lineTo(size - 60, lineY);
-    ctx.stroke();
-
-    // Corpo
+    ctx.beginPath(); ctx.moveTo(60, lineY); ctx.lineTo(size - 60, lineY); ctx.stroke();
     ctx.fillStyle = '#c8d8ee';
     ctx.font = `${formato === 'feed' ? '15px' : '18px'} Arial`;
-    const bodyY = formato === 'feed' ? 330 : 490;
-    wrapText(ctx, p.corpo || '', size/2, bodyY, size - 80, formato === 'feed' ? 22 : 28);
-
-    // CTA
+    wrapCanvasText(ctx, p.corpo || '', size/2, formato === 'feed' ? 330 : 490, size - 80, formato === 'feed' ? 22 : 28);
     ctx.fillStyle = '#ffffff';
     ctx.font = `bold ${formato === 'feed' ? '14px' : '17px'} Arial`;
-    const ctaY = formato === 'feed' ? 440 : 700;
-    ctx.fillText('👉 ' + (p.cta || ''), size/2, ctaY);
-
-    // Nome advogado
+    ctx.fillText('👉 ' + (p.cta || ''), size/2, formato === 'feed' ? 440 : 700);
     ctx.fillStyle = p.cor_destaque || '#c9a84c';
     ctx.font = `bold ${formato === 'feed' ? '13px' : '16px'} Arial`;
-    const nomeY = formato === 'feed' ? 490 : 800;
-    ctx.fillText(nome || 'Dr. Advogado', size/2, nomeY);
-
-    // Hashtags
+    ctx.fillText(nome || 'Dr. Advogado', size/2, formato === 'feed' ? 490 : 800);
     ctx.fillStyle = '#3a5a7a';
     ctx.font = `${formato === 'feed' ? '10px' : '13px'} Arial`;
-    const hashY = formato === 'feed' ? 520 : 860;
-    ctx.fillText((p.hashtags || []).map(h => '#' + h).join(' '), size/2, hashY);
-
-    // Barra bottom
-    ctx.fillStyle = barGrad;
-    ctx.fillRect(0, height - 4, size, 4);
+    ctx.fillText((p.hashtags || []).map(h => '#' + h).join(' '), size/2, formato === 'feed' ? 520 : 860);
+    ctx.fillStyle = barGrad; ctx.fillRect(0, height - 4, size, 4);
   };
 
-  function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-    const words = (text || '').split(' ');
-    let line = '';
-    let cy = y;
-    for (let n = 0; n < words.length; n++) {
-      const testLine = line + words[n] + ' ';
-      const metrics = ctx.measureText(testLine);
-      if (metrics.width > maxWidth && n > 0) {
-        ctx.fillText(line, x, cy);
-        line = words[n] + ' ';
-        cy += lineHeight;
-      } else {
-        line = testLine;
-      }
-    }
-    ctx.fillText(line, x, cy);
-  }
-
-  if (post) {
-    setTimeout(() => desenharCanvas(post), 50);
-  }
+  if (post) setTimeout(() => desenharCanvas(post), 50);
 
   return (
     <div>
@@ -1807,9 +2026,7 @@ Retorne SOMENTE JSON:
             <option value="">Selecione o tema...</option>
             {[...TEMAS_IMG, 'Outro...'].map(t => <option key={t} value={t}>{t}</option>)}
           </select>
-          {tema === 'Outro...' && (
-            <input value={temaCustom} onChange={e => setTemaCustom(e.target.value)} placeholder="Digite o tema..." style={{ ...inp, marginBottom: 10 }} />
-          )}
+          {tema === 'Outro...' && <input value={temaCustom} onChange={e => setTemaCustom(e.target.value)} placeholder="Digite o tema..." style={{ ...inp, marginBottom: 10 }} />}
           <Lbl style={{ marginTop: 10 }}>Estilo</Lbl>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
             {ESTILOS_IMG.map(e => (
@@ -1821,12 +2038,8 @@ Retorne SOMENTE JSON:
             ))}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
-            <div>
-              <Lbl>Seu nome</Lbl>
-              <input value={nome} onChange={e => setNome(e.target.value)} placeholder="Dr(a). Seu Nome" style={inp} />
-            </div>
-            <div>
-              <Lbl>Formato</Lbl>
+            <div><Lbl>Seu nome</Lbl><input value={nome} onChange={e => setNome(e.target.value)} placeholder="Dr(a). Seu Nome" style={inp} /></div>
+            <div><Lbl>Formato</Lbl>
               <select value={formato} onChange={e => setFormato(e.target.value)} style={sel}>
                 <option value="feed">📷 Feed (1:1)</option>
                 <option value="story">📱 Story (9:16)</option>
@@ -1870,11 +2083,11 @@ Retorne SOMENTE JSON:
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
 const TOOLS = [
-  { id: 'lead',     icon: '⚡', label: '1. Lead',      sub: 'Analisar + fechar' },
-  { id: 'crm',      icon: '📋', label: '2. CRM',       sub: 'Pipeline + fichas' },
-  { id: 'contrato', icon: '📄', label: '3. Contrato',  sub: 'Honorários completo' },
-  { id: 'calc',     icon: '🧮', label: '4. Verbas',    sub: 'Calculadora rescisória' },
-  { id: 'presenca', icon: '📣', label: '5. MKT',       sub: 'Presença + Imagem IA' },
+  { id: 'lead',     icon: '⚡', label: '1. Lead',     sub: 'Analisar + fechar' },
+  { id: 'crm',      icon: '📋', label: '2. CRM',      sub: 'Pipeline + fichas' },
+  { id: 'contrato', icon: '📄', label: '3. Contrato', sub: 'Honorários completo' },
+  { id: 'calc',     icon: '🧮', label: '4. Verbas',   sub: 'Calculadora rescisória' },
+  { id: 'presenca', icon: '📣', label: '5. MKT',      sub: 'Presença + Imagem IA' },
 ];
 
 export default function App() {
@@ -1899,10 +2112,10 @@ export default function App() {
         ))}
       </div>
       <div style={{ flex: 1, maxWidth: 700, width: '100%', margin: '0 auto', padding: '28px 18px 60px' }}>
-        {active === 'lead' && <ToolLead onSaveCRM={handleSaveCRM} />}
-        {active === 'crm' && <ToolCRM key={crmKey} />}
+        {active === 'lead'     && <ToolLead onSaveCRM={handleSaveCRM} />}
+        {active === 'crm'      && <ToolCRM key={crmKey} />}
         {active === 'contrato' && <ToolContrato />}
-        {active === 'calc' && <ToolCalc />}
+        {active === 'calc'     && <ToolCalc />}
         {active === 'presenca' && <ToolPresenca />}
       </div>
       <style>{`
