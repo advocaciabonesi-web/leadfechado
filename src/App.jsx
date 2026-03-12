@@ -619,75 +619,6 @@ function ToolLead({ onSaveCRM }) {
           <InfoBox color={T.yellow}>⚠ <strong>Risco:</strong> {analysis.alerta_risco}</InfoBox>
         )}
 
-        {/* ── NOVA MENSAGEM DO LEAD ── */}
-        <div style={{ border: `1.5px dashed ${T.goldBorder}`, borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}>
-          <button onClick={() => { setShowNovaMsg(!showNovaMsg); setNovaResp(null); setNovaMsg(''); }}
-            style={{ width: '100%', background: showNovaMsg ? T.goldDim : 'transparent', border: 'none', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', textAlign: 'left' }}>
-            <span style={{ fontSize: 20 }}>💬</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ color: T.gold, fontSize: 14, fontWeight: 700 }}>Lead mandou nova mensagem?</div>
-              <div style={{ color: T.textMuted, fontSize: 11, marginTop: 2 }}>Cole aqui o que ele escreveu — a IA responde com contexto do caso</div>
-            </div>
-            <span style={{ color: T.gold, fontSize: 18, transform: showNovaMsg ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
-          </button>
-
-          {showNovaMsg && (
-            <div style={{ padding: '0 18px 18px', borderTop: `1px solid ${T.goldBorder}` }}>
-              {!novaResp ? (
-                <>
-                  <div style={{ paddingTop: 14 }}>
-                    <Lbl>Nova mensagem do lead</Lbl>
-                    <textarea value={novaMsg} onChange={e => setNovaMsg(e.target.value)} rows={4}
-                      placeholder={'Ex: "Mas será que meu caso é forte mesmo? Tenho medo de perder meu emprego atual por causa disso..."'}
-                      style={{ ...inp, resize: 'none', lineHeight: 1.7, fontSize: 13, marginBottom: 12 }} />
-                    <Btn onClick={async () => {
-                      if (!novaMsg.trim()) return;
-                      setLoadingNova(true); setErr('');
-                      try {
-                        const ctx = `Lead: ${analysis.nome} | Situação: ${analysis.situacao} | Tempo: ${analysis.tempo_empresa} | Nível: ${analysis.nivel}\nViolações: ${(analysis.violacoes||[]).join(', ')}\nFundamentos: ${(analysis.fundamentos||[]).slice(0,3).join('; ')}`;
-                        const r = await callClaude(P_NOVA_MSG(ctx), `Nova mensagem do lead: "${novaMsg}"`, 1000);
-                        setNovaResp(r);
-                        setHistAuto(prev => [...prev, novaEntrada('💬', `Nova mensagem respondida: "${novaMsg.slice(0,40)}..."`)]);
-                      } catch(e) { setErr(e.message); } finally { setLoadingNova(false); }
-                    }} disabled={loadingNova || !novaMsg.trim()} style={{ width: '100%', padding: 12 }}>
-                      {loadingNova ? '⏳ Analisando mensagem...' : '→ Gerar Resposta para Esta Mensagem'}
-                    </Btn>
-                  </div>
-                </>
-              ) : (
-                <div style={{ paddingTop: 14 }}>
-                  <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 9, padding: '10px 14px', marginBottom: 12 }}>
-                    <div style={{ fontSize: 10, color: T.textDim, fontFamily: 'monospace', marginBottom: 4 }}>MENSAGEM RECEBIDA</div>
-                    <div style={{ color: T.textMuted, fontSize: 13, fontStyle: 'italic' }}>"{novaMsg}"</div>
-                  </div>
-
-                  <div style={{ background: T.purpleBg, border: `1px solid ${T.purple}20`, borderRadius: 9, padding: '10px 14px', marginBottom: 12 }}>
-                    <div style={{ fontSize: 10, color: T.purple, fontFamily: 'monospace', marginBottom: 4 }}>◆ INTENÇÃO DO LEAD</div>
-                    <div style={{ color: T.purple, fontSize: 12, lineHeight: 1.6 }}>{novaResp.analise_intencao}</div>
-                  </div>
-
-                  {[['💬 RESPOSTA WHATSAPP', 'resposta_whatsapp', T.green], ['📧 RESPOSTA E-MAIL', 'resposta_email', T.blue]].map(([lbl, key, cor]) => (
-                    <div key={key} style={{ background: T.card, border: `1px solid ${cor}25`, borderRadius: 10, padding: '12px 14px', marginBottom: 10 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <Tag color={cor}>{lbl}</Tag>
-                        <CopyBtn text={novaResp[key]} />
-                      </div>
-                      <p style={{ color: T.text, fontSize: 13, lineHeight: 1.8, margin: 0, fontFamily: 'Georgia, serif', whiteSpace: 'pre-wrap' }}>{novaResp[key]}</p>
-                    </div>
-                  ))}
-
-                  <div style={{ background: T.yellowBg, border: `1px solid ${T.yellow}25`, borderRadius: 9, padding: '10px 14px', marginBottom: 12 }}>
-                    <div style={{ fontSize: 10, color: T.yellow, fontFamily: 'monospace', marginBottom: 4 }}>⚡ PRÓXIMO PASSO</div>
-                    <div style={{ color: T.yellow, fontSize: 12, fontWeight: 600 }}>{novaResp.proximo_passo}</div>
-                  </div>
-
-                  <Btn variant="ghost" onClick={() => { setNovaResp(null); setNovaMsg(''); }} style={{ width: '100%', fontSize: 11 }}>↺ Analisar outra mensagem</Btn>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
         <Card>
           <Lbl>🎯 Abordagem de fechamento</Lbl>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
@@ -724,6 +655,88 @@ function ToolLead({ onSaveCRM }) {
         <Btn onClick={() => gerarMsgs(ab, fmt)} disabled={loading} style={{ width: '100%', padding: 14 }}>
           {loading ? '⏳ Gerando mensagem...' : `→ Gerar ${FORMATOS.find(f=>f.id===fmt)?.icon} ${FORMATOS.find(f=>f.id===fmt)?.label} · tom ${ABORDAGENS.find(a=>a.id===ab)?.icon} ${ABORDAGENS.find(a=>a.id===ab)?.label}`}
         </Btn>
+
+        {/* ── RESPONDER MENSAGEM / DÚVIDA DO CLIENTE ── */}
+        <div style={{ marginTop: 10, position: 'relative' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <div style={{ flex: 1, height: 1, background: T.border }} />
+            <span style={{ color: T.textDim, fontSize: 10, fontFamily: 'monospace', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>OU SE O CLIENTE JÁ RESPONDEU</span>
+            <div style={{ flex: 1, height: 1, background: T.border }} />
+          </div>
+
+          <button onClick={() => { setShowNovaMsg(!showNovaMsg); setNovaResp(null); setNovaMsg(''); }}
+            style={{ width: '100%', background: showNovaMsg ? T.goldDim : T.surface, border: `1.5px dashed ${showNovaMsg ? T.gold : T.border}`, borderRadius: 12, padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}
+            onMouseEnter={e => { if (!showNovaMsg) { e.currentTarget.style.borderColor = T.gold; e.currentTarget.style.background = T.goldDim; }}}
+            onMouseLeave={e => { if (!showNovaMsg) { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = T.surface; }}}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: showNovaMsg ? T.gold : `${T.gold}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0, transition: 'all 0.2s' }}>
+              💬
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: showNovaMsg ? T.gold : T.text, fontSize: 13, fontWeight: 700, transition: 'color 0.2s' }}>Responder mensagem, dúvida ou resposta do cliente</div>
+              <div style={{ color: T.textMuted, fontSize: 11, marginTop: 2 }}>Cole aqui o que o cliente escreveu — a IA gera a resposta ideal com contexto do caso já analisado</div>
+            </div>
+            <span style={{ color: showNovaMsg ? T.gold : T.textDim, fontSize: 18, transform: showNovaMsg ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
+          </button>
+
+          {showNovaMsg && (
+            <div style={{ background: T.surface, border: `1px solid ${T.goldBorder}`, borderRadius: '0 0 12px 12px', borderTop: 'none', padding: '16px 18px 18px' }}>
+              {!novaResp ? (
+                <>
+                  <Lbl>O que o cliente escreveu?</Lbl>
+                  <textarea value={novaMsg} onChange={e => setNovaMsg(e.target.value)} rows={4}
+                    placeholder={'Cole aqui a mensagem, dúvida ou resposta do cliente...\n\nEx: "Mas será que vale a pena mesmo? Tenho medo de perder meu emprego atual..."'}
+                    style={{ ...inp, resize: 'none', lineHeight: 1.7, fontSize: 13, marginBottom: 12, borderColor: `${T.gold}40` }} />
+                  <Btn onClick={async () => {
+                    if (!novaMsg.trim()) return;
+                    setLoadingNova(true); setErr('');
+                    try {
+                      const ctx = `Lead: ${analysis.nome} | Situação: ${analysis.situacao} | Tempo: ${analysis.tempo_empresa} | Nível: ${analysis.nivel}\nViolações: ${(analysis.violacoes||[]).join(', ')}\nFundamentos: ${(analysis.fundamentos||[]).slice(0,3).join('; ')}`;
+                      const r = await callClaude(P_NOVA_MSG(ctx), `Mensagem/dúvida do cliente: "${novaMsg}"`, 1000);
+                      setNovaResp(r);
+                      setHistAuto(prev => [...prev, novaEntrada('💬', `Mensagem do cliente respondida: "${novaMsg.slice(0,50)}..."`)]);
+                    } catch(e) { setErr(e.message); } finally { setLoadingNova(false); }
+                  }} disabled={loadingNova || !novaMsg.trim()} style={{ width: '100%', padding: 12 }}>
+                    {loadingNova ? '⏳ Gerando resposta ideal...' : '→ Gerar Resposta para Esta Mensagem'}
+                  </Btn>
+                </>
+              ) : (
+                <>
+                  <div style={{ background: `${T.border}50`, borderRadius: 8, padding: '10px 14px', marginBottom: 14, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 14 }}>👤</span>
+                    <div>
+                      <div style={{ fontSize: 10, color: T.textDim, fontFamily: 'monospace', marginBottom: 3 }}>CLIENTE DISSE</div>
+                      <div style={{ color: T.textMuted, fontSize: 13, fontStyle: 'italic', lineHeight: 1.6 }}>"{novaMsg}"</div>
+                    </div>
+                  </div>
+
+                  <div style={{ background: T.purpleBg, border: `1px solid ${T.purple}20`, borderRadius: 9, padding: '10px 14px', marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: T.purple, fontFamily: 'monospace', marginBottom: 4 }}>🧠 O QUE ELE ESTÁ REALMENTE DIZENDO</div>
+                    <div style={{ color: T.purple, fontSize: 12, lineHeight: 1.6 }}>{novaResp.analise_intencao}</div>
+                  </div>
+
+                  {[['💬 RESPONDER NO WHATSAPP', 'resposta_whatsapp', T.green], ['📧 RESPONDER POR E-MAIL', 'resposta_email', T.blue]].map(([lbl, key, cor]) => (
+                    <div key={key} style={{ background: T.card, border: `1px solid ${cor}30`, borderRadius: 10, padding: '12px 14px', marginBottom: 10 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <Tag color={cor}>{lbl}</Tag>
+                        <CopyBtn text={novaResp[key]} />
+                      </div>
+                      <p style={{ color: T.text, fontSize: 13, lineHeight: 1.8, margin: 0, fontFamily: 'Georgia, serif', whiteSpace: 'pre-wrap' }}>{novaResp[key]}</p>
+                    </div>
+                  ))}
+
+                  <div style={{ background: T.yellowBg, border: `1px solid ${T.yellow}25`, borderRadius: 9, padding: '10px 14px', marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: T.yellow, fontFamily: 'monospace', marginBottom: 4 }}>⚡ PRÓXIMO PASSO RECOMENDADO</div>
+                    <div style={{ color: T.yellow, fontSize: 12, fontWeight: 600, lineHeight: 1.5 }}>{novaResp.proximo_passo}</div>
+                  </div>
+
+                  <Btn variant="ghost" onClick={() => { setNovaResp(null); setNovaMsg(''); }} style={{ width: '100%', fontSize: 11 }}>
+                    ↺ Cliente mandou outra mensagem? Responder novamente
+                  </Btn>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     );
   }
