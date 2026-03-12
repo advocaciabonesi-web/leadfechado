@@ -248,6 +248,14 @@ REGRAS ABSOLUTAS:
 RESPONDA SOMENTE com o JSON (sem markdown):
 {"mensagem_principal":"texto completo aqui","followup_24h":"texto de acompanhamento 24h depois no mesmo formato","por_que_fecha":"razão técnica desta combinação abordagem+formato"}`;
 
+const P_NOVA_MSG = (ctx) => `Você é um advogado trabalhista expert em comunicação e fechamento de contratos. O lead abaixo já foi analisado e está no funil. Ele mandou uma nova mensagem. Responda de forma estratégica, mantendo o relacionamento aquecido e avançando o fechamento. Respeite o EOAB: sem prometer resultados ou valores.
+
+CONTEXTO DO CASO JÁ ANALISADO:
+${ctx}
+
+Responda SOMENTE com o JSON (sem markdown):
+{"resposta_whatsapp":"resposta direta para WhatsApp (máx 5 linhas, tom humano, termina com pergunta ou próximo passo claro)","resposta_email":"versão mais formal para e-mail ou LinkedIn","analise_intencao":"o que o lead está realmente comunicando com essa mensagem (insegurança, interesse, objeção velada, etc.)","proximo_passo":"ação concreta que o advogado deve tomar agora"}`;
+
 const P_OBJECAO = `Você é um advogado trabalhista expert em fechamento de contratos. Responda à objeção do cliente com empatia e argumentação jurídica sólida. Respeite o EOAB: sem prometer resultados ou valores, sem captação explícita.
 RESPONDA SOMENTE com o JSON (sem markdown):
 {"validacao":"frase empática que valida o sentimento sem concordar com a desistência","resposta_whatsapp":"mensagem WhatsApp (máx 4 linhas, tom humano, termina com pergunta)","resposta_presencial":"resposta para ligação ou encontro presencial (2-3 frases diretas)","argumento_juridico":"fundamento técnico específico que fortalece o caso do cliente","erro_comum":"o que o advogado NÃO deve dizer nessa situação"}`;
@@ -415,6 +423,10 @@ function ToolLead({ onSaveCRM }) {
   const [nomeArq, setNomeArq]   = useState('');
   const [savedCRM, setSavedCRM] = useState(false);
   const [histAuto, setHistAuto] = useState([]);
+  const [novaMsg, setNovaMsg]   = useState('');
+  const [novaResp, setNovaResp] = useState(null);
+  const [loadingNova, setLoadingNova] = useState(false);
+  const [showNovaMsg, setShowNovaMsg] = useState(false);
 
   const handleArquivo = async (e) => {
     const file = e.target.files[0];
@@ -606,6 +618,75 @@ function ToolLead({ onSaveCRM }) {
         {analysis.alerta_risco && analysis.alerta_risco !== 'null' && (
           <InfoBox color={T.yellow}>⚠ <strong>Risco:</strong> {analysis.alerta_risco}</InfoBox>
         )}
+
+        {/* ── NOVA MENSAGEM DO LEAD ── */}
+        <div style={{ border: `1.5px dashed ${T.goldBorder}`, borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}>
+          <button onClick={() => { setShowNovaMsg(!showNovaMsg); setNovaResp(null); setNovaMsg(''); }}
+            style={{ width: '100%', background: showNovaMsg ? T.goldDim : 'transparent', border: 'none', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', textAlign: 'left' }}>
+            <span style={{ fontSize: 20 }}>💬</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: T.gold, fontSize: 14, fontWeight: 700 }}>Lead mandou nova mensagem?</div>
+              <div style={{ color: T.textMuted, fontSize: 11, marginTop: 2 }}>Cole aqui o que ele escreveu — a IA responde com contexto do caso</div>
+            </div>
+            <span style={{ color: T.gold, fontSize: 18, transform: showNovaMsg ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
+          </button>
+
+          {showNovaMsg && (
+            <div style={{ padding: '0 18px 18px', borderTop: `1px solid ${T.goldBorder}` }}>
+              {!novaResp ? (
+                <>
+                  <div style={{ paddingTop: 14 }}>
+                    <Lbl>Nova mensagem do lead</Lbl>
+                    <textarea value={novaMsg} onChange={e => setNovaMsg(e.target.value)} rows={4}
+                      placeholder={'Ex: "Mas será que meu caso é forte mesmo? Tenho medo de perder meu emprego atual por causa disso..."'}
+                      style={{ ...inp, resize: 'none', lineHeight: 1.7, fontSize: 13, marginBottom: 12 }} />
+                    <Btn onClick={async () => {
+                      if (!novaMsg.trim()) return;
+                      setLoadingNova(true); setErr('');
+                      try {
+                        const ctx = `Lead: ${analysis.nome} | Situação: ${analysis.situacao} | Tempo: ${analysis.tempo_empresa} | Nível: ${analysis.nivel}\nViolações: ${(analysis.violacoes||[]).join(', ')}\nFundamentos: ${(analysis.fundamentos||[]).slice(0,3).join('; ')}`;
+                        const r = await callClaude(P_NOVA_MSG(ctx), `Nova mensagem do lead: "${novaMsg}"`, 1000);
+                        setNovaResp(r);
+                        setHistAuto(prev => [...prev, novaEntrada('💬', `Nova mensagem respondida: "${novaMsg.slice(0,40)}..."`)]);
+                      } catch(e) { setErr(e.message); } finally { setLoadingNova(false); }
+                    }} disabled={loadingNova || !novaMsg.trim()} style={{ width: '100%', padding: 12 }}>
+                      {loadingNova ? '⏳ Analisando mensagem...' : '→ Gerar Resposta para Esta Mensagem'}
+                    </Btn>
+                  </div>
+                </>
+              ) : (
+                <div style={{ paddingTop: 14 }}>
+                  <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 9, padding: '10px 14px', marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: T.textDim, fontFamily: 'monospace', marginBottom: 4 }}>MENSAGEM RECEBIDA</div>
+                    <div style={{ color: T.textMuted, fontSize: 13, fontStyle: 'italic' }}>"{novaMsg}"</div>
+                  </div>
+
+                  <div style={{ background: T.purpleBg, border: `1px solid ${T.purple}20`, borderRadius: 9, padding: '10px 14px', marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: T.purple, fontFamily: 'monospace', marginBottom: 4 }}>◆ INTENÇÃO DO LEAD</div>
+                    <div style={{ color: T.purple, fontSize: 12, lineHeight: 1.6 }}>{novaResp.analise_intencao}</div>
+                  </div>
+
+                  {[['💬 RESPOSTA WHATSAPP', 'resposta_whatsapp', T.green], ['📧 RESPOSTA E-MAIL', 'resposta_email', T.blue]].map(([lbl, key, cor]) => (
+                    <div key={key} style={{ background: T.card, border: `1px solid ${cor}25`, borderRadius: 10, padding: '12px 14px', marginBottom: 10 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <Tag color={cor}>{lbl}</Tag>
+                        <CopyBtn text={novaResp[key]} />
+                      </div>
+                      <p style={{ color: T.text, fontSize: 13, lineHeight: 1.8, margin: 0, fontFamily: 'Georgia, serif', whiteSpace: 'pre-wrap' }}>{novaResp[key]}</p>
+                    </div>
+                  ))}
+
+                  <div style={{ background: T.yellowBg, border: `1px solid ${T.yellow}25`, borderRadius: 9, padding: '10px 14px', marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: T.yellow, fontFamily: 'monospace', marginBottom: 4 }}>⚡ PRÓXIMO PASSO</div>
+                    <div style={{ color: T.yellow, fontSize: 12, fontWeight: 600 }}>{novaResp.proximo_passo}</div>
+                  </div>
+
+                  <Btn variant="ghost" onClick={() => { setNovaResp(null); setNovaMsg(''); }} style={{ width: '100%', fontSize: 11 }}>↺ Analisar outra mensagem</Btn>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         <Card>
           <Lbl>🎯 Abordagem de fechamento</Lbl>
