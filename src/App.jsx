@@ -151,6 +151,29 @@ REGRAS ABSOLUTAS:
 RESPONDA SOMENTE com o JSON (sem markdown):
 {"mensagem_principal":"texto aqui","followup_24h":"texto aqui","por_que_fecha":"razão técnica de fechamento"}`;
 
+const P_APRESENTACAO = (nomeAdv, escritorio, personalizada) => `Você é um especialista em comunicação jurídica. Gere uma mensagem de PRIMEIRO CONTATO para um advogado trabalhista responder um potencial cliente que acabou de entrar em contato (ex: mandou apenas "Oi", "Boa tarde" ou mensagem inicial).
+
+OBJETIVO: Iniciar o funil de forma acolhedora, profissional e gerar confiança para o cliente compartilhar o caso.
+
+${personalizada ? `ADVOGADO: ${nomeAdv || '[Nome do Advogado]'}\nESCRITÓRIO: ${escritorio || '[Nome do Escritório]'}` : 'Use linguagem genérica — o advogado vai personalizar antes de enviar.'}
+
+REGRAS ABSOLUTAS:
+- NUNCA prometer resultado, valor ou êxito (violação EOAB arts. 34 e 39)
+- Tom acolhedor, humano e profissional
+- Máximo 6 linhas para WhatsApp
+- Terminar com uma pergunta aberta que convide o cliente a contar o caso
+
+RESPONDA SOMENTE com o JSON (sem markdown):
+{"whatsapp":"mensagem para WhatsApp (max 6 linhas)","email":"versão para e-mail ou LinkedIn (mais formal, com saudação e despedida)","por_que_funciona":"razão psicológica da abordagem"}`;
+
+const P_NOVA_MSG = (ctx) => `Você é um advogado trabalhista expert em comunicação e fechamento de contratos. O lead abaixo já foi analisado e está no funil. Ele mandou uma nova mensagem. Responda de forma estratégica, mantendo o relacionamento aquecido e avançando o fechamento. Respeite o EOAB: sem prometer resultados ou valores.
+
+CONTEXTO DO CASO JÁ ANALISADO:
+${ctx}
+
+Responda SOMENTE com o JSON (sem markdown):
+{"resposta_whatsapp":"resposta direta para WhatsApp (máx 5 linhas, tom humano, termina com pergunta ou próximo passo claro)","resposta_email":"versão mais formal para e-mail ou LinkedIn","analise_intencao":"o que o lead está realmente comunicando com essa mensagem (insegurança, interesse, objeção velada, etc.)","proximo_passo":"ação concreta que o advogado deve tomar agora"}`;
+
 const P_OBJECAO = `Você é um advogado trabalhista expert em fechamento de contratos. Responda à objeção do cliente com empatia e argumentação jurídica sólida. Respeite o EOAB: sem prometer resultados ou valores, sem captação explícita.
 RESPONDA SOMENTE com o JSON (sem markdown):
 {"validacao":"frase empática que valida o sentimento sem concordar com a desistência","resposta_whatsapp":"mensagem WhatsApp (máx 4 linhas, tom humano, termina com pergunta)","resposta_presencial":"resposta para ligação ou encontro presencial (2-3 frases diretas)","argumento_juridico":"fundamento técnico específico que fortalece o caso do cliente","erro_comum":"o que o advogado NÃO deve dizer nessa situação"}`;
@@ -231,6 +254,84 @@ RESPONDA SOMENTE com o JSON (sem markdown):
 const NC = { forte: T.green, moderado: T.yellow, fraco: T.red };
 const NB = { forte: T.greenBg, moderado: T.yellowBg, fraco: T.redBg };
 
+function BlocoApresentacao() {
+  const [aberto, setAberto]         = useState(false);
+  const [modo, setModo]             = useState('generica');
+  const [nomeAdv, setNomeAdv]       = useState('');
+  const [escritorio, setEscritorio] = useState('');
+  const [resultado, setResultado]   = useState(null);
+  const [loading, setLoading]       = useState(false);
+  const [err, setErr]               = useState('');
+
+  const gerar = async () => {
+    setLoading(true); setErr('');
+    try {
+      const r = await callClaude(P_APRESENTACAO(nomeAdv, escritorio, modo === 'personalizada'), 'Gere a mensagem de primeiro contato.', 800);
+      setResultado(r);
+    } catch (e) { setErr(e.message); } finally { setLoading(false); }
+  };
+
+  return (
+    <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, marginBottom: 14, overflow: 'hidden' }}>
+      <button onClick={() => setAberto(!aberto)}
+        style={{ width: '100%', background: 'transparent', border: 'none', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', textAlign: 'left' }}>
+        <span style={{ fontSize: 20 }}>👋</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ color: T.text, fontSize: 14, fontWeight: 700 }}>Mensagem de Apresentação</div>
+          <div style={{ color: T.textMuted, fontSize: 11, marginTop: 2 }}>Cliente mandou "Oi"? Gere aqui o primeiro contato do funil</div>
+        </div>
+        <span style={{ color: T.textMuted, fontSize: 18, transform: aberto ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
+      </button>
+      {aberto && (
+        <div style={{ padding: '0 18px 18px', borderTop: `1px solid ${T.border}` }}>
+          {!resultado ? (
+            <>
+              <div style={{ paddingTop: 14, marginBottom: 14 }}>
+                <Lbl>Tipo de mensagem</Lbl>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[['generica', '🌐 Genérica', 'Pronto para usar'], ['personalizada', '✏️ Personalizada', 'Com seu nome e escritório']].map(([v, l, d]) => (
+                    <button key={v} onClick={() => setModo(v)}
+                      style={{ flex: 1, background: modo === v ? T.goldDim : 'transparent', border: `1px solid ${modo === v ? T.gold : T.border}`, borderRadius: 9, padding: '10px 12px', cursor: 'pointer', textAlign: 'left' }}>
+                      <div style={{ color: modo === v ? T.gold : T.text, fontSize: 12, fontWeight: 700 }}>{l}</div>
+                      <div style={{ color: T.textMuted, fontSize: 10, marginTop: 2 }}>{d}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {modo === 'personalizada' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+                  <div><Lbl>Seu nome</Lbl><input value={nomeAdv} onChange={e => setNomeAdv(e.target.value)} placeholder="Dr(a). Seu Nome" style={inp} /></div>
+                  <div><Lbl>Escritório</Lbl><input value={escritorio} onChange={e => setEscritorio(e.target.value)} placeholder="Nome do Escritório" style={inp} /></div>
+                </div>
+              )}
+              <Err msg={err} />
+              <Btn onClick={gerar} disabled={loading} style={{ width: '100%', padding: 12 }}>
+                {loading ? '⏳ Gerando...' : '→ Gerar Mensagem de Apresentação'}
+              </Btn>
+            </>
+          ) : (
+            <div style={{ paddingTop: 14 }}>
+              {[['💬 WHATSAPP', 'whatsapp', T.green], ['📧 E-MAIL / LINKEDIN', 'email', T.blue]].map(([lbl, key, cor]) => (
+                <Card key={key} accent={cor} style={{ marginBottom: 10 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <Tag color={cor}>{lbl}</Tag><CopyBtn text={resultado[key]} />
+                  </div>
+                  <p style={{ color: T.text, fontSize: 13, lineHeight: 1.8, margin: 0, fontFamily: 'Georgia, serif', whiteSpace: 'pre-wrap' }}>{resultado[key]}</p>
+                </Card>
+              ))}
+              <div style={{ background: T.greenBg, borderRadius: 9, padding: '10px 14px', marginBottom: 10 }}>
+                <div style={{ fontSize: 10, color: T.green, fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 4 }}>◆ POR QUE FUNCIONA</div>
+                <p style={{ color: T.green, fontSize: 12, margin: 0, lineHeight: 1.6, fontStyle: 'italic' }}>{resultado.por_que_funciona}</p>
+              </div>
+              <Btn variant="ghost" onClick={() => setResultado(null)} style={{ width: '100%', fontSize: 11 }}>↺ Gerar novamente</Btn>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ToolLead({ onSaveCRM }) {
   const [step, setStep] = useState(1);
   const [txt, setTxt] = useState('');
@@ -246,6 +347,10 @@ function ToolLead({ onSaveCRM }) {
   const [histAuto, setHistAuto] = useState([]);
   const [dossie, setDossie] = useState(null);
   const [loadingDossie, setLoadingDossie] = useState(false);
+  const [novaMsg, setNovaMsg]         = useState('');
+  const [novaResp, setNovaResp]       = useState(null);
+  const [loadingNova, setLoadingNova] = useState(false);
+  const [showNovaMsg, setShowNovaMsg] = useState(false);
 
   const novaEntrada = (icone, txt) => ({
     icone, txt, auto: true,
@@ -253,21 +358,60 @@ function ToolLead({ onSaveCRM }) {
     hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
   });
 
-  const handleArquivo = (e) => {
+  const handleArquivo = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    setErr('');
+
+    // ZIP — exportação do WhatsApp
+    if (file.name.endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed') {
+      try {
+        const JSZipMod = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
+        const JSZip = JSZipMod.default || JSZipMod;
+        const zip = await JSZip.loadAsync(file);
+        let textoConversa = '';
+        const audios = [];
+        for (const [nome, entry] of Object.entries(zip.files)) {
+          if (!entry.dir) {
+            if (nome.endsWith('.txt')) textoConversa = await entry.async('string');
+            else if (nome.match(/\.(mp4|m4a|opus|ogg|aac|mp3)$/i)) audios.push(nome);
+          }
+        }
+        if (textoConversa) {
+          setTxt(textoConversa.slice(0, 8000));
+          setNomeArquivo(file.name + ' ✓ conversa extraída');
+          setArquivo(null);
+          if (audios.length > 0) setErr('✓ Conversa extraída! ' + audios.length + ' áudio(s) no ZIP.');
+        } else {
+          setErr('Nenhum texto encontrado no ZIP. Confirme se é exportação do WhatsApp.');
+        }
+      } catch (_) { setErr('Erro ao abrir o ZIP. Extraia manualmente e cole o texto.'); }
+      return;
+    }
+
+    // TXT simples
+    if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+      const reader = new FileReader();
+      reader.onload = () => { setTxt(reader.result.slice(0, 8000)); setNomeArquivo(file.name); setArquivo(null); };
+      reader.readAsText(file, 'UTF-8'); return;
+    }
+
+    // Áudio avulso do WhatsApp
+    if (file.type.startsWith('audio/') || file.name.match(/\.(mp4|m4a|opus|ogg|aac|mp3)$/i)) {
+      setNomeArquivo(file.name + ' (áudio — cole a transcrição abaixo)');
+      setArquivo(null); setErr('Áudio recebido! Cole a transcrição manualmente no campo acima.'); return;
+    }
+
+    // PDF ou imagem
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = reader.result.split(',')[1];
-      const isPdf = file.type === 'application/pdf';
-      const isImg = file.type.startsWith('image/');
-      if (isPdf) {
+      if (file.type === 'application/pdf') {
         setArquivo({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } });
-      } else if (isImg) {
+      } else if (file.type.startsWith('image/')) {
         setArquivo({ type: 'image', source: { type: 'base64', media_type: file.type, data: base64 } });
       } else {
-        setErr('Use PDF ou imagem (JPG, PNG).');
-        return;
+        setErr('Formato não suportado. Use PDF, imagem, TXT ou ZIP do WhatsApp.'); return;
       }
       setNomeArquivo(file.name);
     };
@@ -325,6 +469,10 @@ function ToolLead({ onSaveCRM }) {
   if (step === 1) return (
     <div>
       <Title sub="Cole o relato ou anexe um arquivo — PDF, print, foto do documento.">⚡ Analisar Lead</Title>
+
+      {/* ── BLOCO APRESENTAÇÃO ── */}
+      <BlocoApresentacao />
+
       <textarea value={txt} onChange={(e) => setTxt(e.target.value)} rows={7}
         placeholder="Cole aqui o relato do lead trabalhista...&#10;&#10;Ex: 'Fui demitido depois de 6 anos sem receber horas extras...'"
         style={{ ...inp, resize: 'vertical', lineHeight: 1.7, fontSize: 14, padding: 16 }}
@@ -334,14 +482,14 @@ function ToolLead({ onSaveCRM }) {
 
       {/* ANEXO */}
       <label style={{ display: 'flex', alignItems: 'center', gap: 10, background: nomeArquivo ? T.greenBg : T.surface, border: `1px solid ${nomeArquivo ? T.green : T.border}`, borderRadius: 10, padding: '12px 16px', cursor: 'pointer', marginBottom: 14, transition: 'all 0.2s' }}>
-        <input type="file" accept=".pdf,image/*" onChange={handleArquivo} style={{ display: 'none' }} />
+        <input type="file" accept=".pdf,.zip,.txt,.mp4,.m4a,.opus,.ogg,.aac,.mp3,image/*" onChange={handleArquivo} style={{ display: 'none' }} />
         <span style={{ fontSize: 18 }}>{nomeArquivo ? '✓' : '📎'}</span>
         <div>
           <div style={{ color: nomeArquivo ? T.green : T.text, fontSize: 13, fontWeight: 600 }}>
-            {nomeArquivo || 'Anexar arquivo — PDF ou imagem'}
+            {nomeArquivo || 'Anexar arquivo — PDF, imagem ou ZIP do WhatsApp'}
           </div>
           <div style={{ color: T.textMuted, fontSize: 11, marginTop: 2 }}>
-            {nomeArquivo ? 'Arquivo pronto para análise' : 'Print de conversa, documento, formulário...'}
+            {nomeArquivo ? 'Arquivo pronto para análise' : 'ZIP do WhatsApp, PDF, print, áudio (.mp4/.opus/.m4a)...'}
           </div>
         </div>
         {nomeArquivo && (
@@ -449,6 +597,81 @@ function ToolLead({ onSaveCRM }) {
         <Btn onClick={() => gerarMsgs(ab, fmt)} disabled={loading} style={{ width: '100%', padding: 14 }}>
           {loading ? '⏳ Gerando mensagem...' : `→ Gerar ${FORMATOS.find(f=>f.id===fmt)?.icon} ${FORMATOS.find(f=>f.id===fmt)?.label} com tom ${ABORDAGENS.find((a) => a.id === ab)?.icon} ${ABORDAGENS.find((a) => a.id === ab)?.label}`}
         </Btn>
+
+        {/* ── RESPONDER MENSAGEM DO CLIENTE ── */}
+        <div style={{ marginTop: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <div style={{ flex: 1, height: 1, background: T.border }} />
+            <span style={{ color: T.textDim, fontSize: 10, fontFamily: 'monospace', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>OU SE O CLIENTE JÁ RESPONDEU</span>
+            <div style={{ flex: 1, height: 1, background: T.border }} />
+          </div>
+          <button onClick={() => { setShowNovaMsg(!showNovaMsg); setNovaResp(null); setNovaMsg(''); }}
+            style={{ width: '100%', background: showNovaMsg ? T.goldDim : T.surface, border: `1.5px dashed ${showNovaMsg ? T.gold : T.border}`, borderRadius: 12, padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: showNovaMsg ? T.gold : `${T.gold}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>💬</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: showNovaMsg ? T.gold : T.text, fontSize: 13, fontWeight: 700 }}>Responder mensagem, dúvida ou resposta do cliente</div>
+              <div style={{ color: T.textMuted, fontSize: 11, marginTop: 2 }}>Cole aqui o que o cliente escreveu — a IA gera a resposta ideal com contexto do caso</div>
+            </div>
+            <span style={{ color: showNovaMsg ? T.gold : T.textDim, fontSize: 18, transform: showNovaMsg ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
+          </button>
+          {showNovaMsg && (
+            <div style={{ background: T.surface, border: `1px solid ${T.goldBorder}`, borderRadius: '0 0 12px 12px', borderTop: 'none', padding: '16px 18px 18px' }}>
+              {!novaResp ? (
+                <>
+                  <Lbl>O que o cliente escreveu?</Lbl>
+                  <textarea value={novaMsg} onChange={e => setNovaMsg(e.target.value)} rows={4}
+                    placeholder={'Cole aqui a mensagem, dúvida ou resposta do cliente...
+
+Ex: "Mas será que vale a pena mesmo? Tenho medo de perder meu emprego atual..."'}
+                    style={{ ...inp, resize: 'none', lineHeight: 1.7, fontSize: 13, marginBottom: 12, borderColor: `${T.gold}40` }} />
+                  <Btn onClick={async () => {
+                    if (!novaMsg.trim()) return;
+                    setLoadingNova(true); setErr('');
+                    try {
+                      const ctx = `Lead: ${analysis.nome} | Situação: ${analysis.situacao} | Tempo: ${analysis.tempo_empresa} | Nível: ${analysis.nivel}
+Violações: ${(analysis.violacoes||[]).join(', ')}
+Fundamentos: ${(analysis.fundamentos||[]).slice(0,3).join('; ')}`;
+                      const r = await callClaude(P_NOVA_MSG(ctx), `Mensagem/dúvida do cliente: "${novaMsg}"`, 1000);
+                      setNovaResp(r);
+                      setHistAuto(prev => [...prev, novaEntrada('💬', `Mensagem do cliente respondida: "${novaMsg.slice(0,50)}..."`)]);
+                    } catch(e) { setErr(e.message); } finally { setLoadingNova(false); }
+                  }} disabled={loadingNova || !novaMsg.trim()} style={{ width: '100%', padding: 12 }}>
+                    {loadingNova ? '⏳ Gerando resposta ideal...' : '→ Gerar Resposta para Esta Mensagem'}
+                  </Btn>
+                </>
+              ) : (
+                <>
+                  <div style={{ background: `${T.border}50`, borderRadius: 8, padding: '10px 14px', marginBottom: 14, display: 'flex', gap: 8 }}>
+                    <span style={{ fontSize: 14 }}>👤</span>
+                    <div>
+                      <div style={{ fontSize: 10, color: T.textDim, fontFamily: 'monospace', marginBottom: 3 }}>CLIENTE DISSE</div>
+                      <div style={{ color: T.textMuted, fontSize: 13, fontStyle: 'italic', lineHeight: 1.6 }}>"{novaMsg}"</div>
+                    </div>
+                  </div>
+                  <div style={{ background: T.purpleBg, border: `1px solid ${T.purple}20`, borderRadius: 9, padding: '10px 14px', marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: T.purple, fontFamily: 'monospace', marginBottom: 4 }}>🧠 O QUE ELE ESTÁ REALMENTE DIZENDO</div>
+                    <div style={{ color: T.purple, fontSize: 12, lineHeight: 1.6 }}>{novaResp.analise_intencao}</div>
+                  </div>
+                  {[['💬 RESPONDER NO WHATSAPP', 'resposta_whatsapp', T.green], ['📧 RESPONDER POR E-MAIL', 'resposta_email', T.blue]].map(([lbl, key, cor]) => (
+                    <div key={key} style={{ background: T.card, border: `1px solid ${cor}30`, borderRadius: 10, padding: '12px 14px', marginBottom: 10 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <Tag color={cor}>{lbl}</Tag><CopyBtn text={novaResp[key]} />
+                      </div>
+                      <p style={{ color: T.text, fontSize: 13, lineHeight: 1.8, margin: 0, fontFamily: 'Georgia, serif', whiteSpace: 'pre-wrap' }}>{novaResp[key]}</p>
+                    </div>
+                  ))}
+                  <div style={{ background: T.yellowBg, border: `1px solid ${T.yellow}25`, borderRadius: 9, padding: '10px 14px', marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: T.yellow, fontFamily: 'monospace', marginBottom: 4 }}>⚡ PRÓXIMO PASSO RECOMENDADO</div>
+                    <div style={{ color: T.yellow, fontSize: 12, fontWeight: 600, lineHeight: 1.5 }}>{novaResp.proximo_passo}</div>
+                  </div>
+                  <Btn variant="ghost" onClick={() => { setNovaResp(null); setNovaMsg(''); }} style={{ width: '100%', fontSize: 11 }}>
+                    ↺ Cliente mandou outra mensagem? Responder novamente
+                  </Btn>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     );
   }
