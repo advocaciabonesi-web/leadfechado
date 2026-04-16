@@ -234,15 +234,22 @@ const INSTRUCOES = {
 };
 
 const FORMATOS = [
-  { id: 'whatsapp', icon: '💬', label: 'WhatsApp', desc: 'Curto e direto, máx 5 linhas' },
-  { id: 'email', icon: '📧', label: 'E-mail', desc: 'Formal, completo, com saudação' },
-  { id: 'ligacao', icon: '📞', label: 'Roteiro de Ligação', desc: 'Script para falar ao telefone' },
-  { id: 'formal', icon: '📋', label: 'Mensagem Formal', desc: 'Profissional para LinkedIn/escritório' },
+  { id: 'whatsapp', icon: '💬', label: 'WhatsApp',             desc: 'Curto e direto, máx 5 linhas' },
+  { id: 'email',    icon: '📧', label: 'E-mail',               desc: 'Formal, completo, com saudação' },
+  { id: 'ligacao',  icon: '📞', label: 'Roteiro de Ligação',   desc: 'Script para falar ao telefone' },
+  { id: 'formal',   icon: '📋', label: 'Mensagem Formal',      desc: 'Para LinkedIn ou escritório' },
+  { id: 'parecer',  icon: '📝', label: 'Parecer Simplificado', desc: 'Caso explicado em linguagem simples para o cliente entender' },
 ];
 
 const P_MENSAGEM_FORMATO = (abordagem, instrucao, formato) => `Você é um advogado trabalhista gerando comunicação para FECHAR CONTRATO.
 ABORDAGEM: ${abordagem} — ${instrucao}
-FORMATO: ${formato === 'whatsapp' ? 'WhatsApp — máximo 5 linhas, tom direto, informal mas profissional' : formato === 'email' ? 'E-mail — com Assunto, saudação formal, corpo de 3-4 parágrafos, despedida' : formato === 'ligacao' ? 'Roteiro de ligação telefônica — com abertura, desenvolvimento e fechamento em tópicos curtos para o advogado falar' : 'Mensagem formal — tom institucional, adequado para LinkedIn ou comunicação de escritório'}
+FORMATO: ${
+  formato === 'whatsapp' ? 'WhatsApp — máximo 5 linhas, tom direto, informal mas profissional' :
+  formato === 'email'    ? 'E-mail — com Assunto, saudação formal, corpo de 3-4 parágrafos, despedida' :
+  formato === 'ligacao'  ? 'Roteiro de ligação telefônica — com abertura, desenvolvimento e fechamento em tópicos curtos' :
+  formato === 'formal'   ? 'Mensagem formal — tom institucional, adequado para LinkedIn ou comunicação de escritório' :
+                           'Parecer Simplificado — explique o caso em linguagem 100% acessível para o cliente: quais são os direitos violados, o que pode ser feito juridicamente e qual o próximo passo concreto. SEM juridiquês. Tom humano, didático e encorajador. Máx. 8 linhas. O objetivo é o cliente entender o próprio caso e ter confiança para contratar.'
+}
 REGRAS ABSOLUTAS:
 - NUNCA prometer resultado, valor ou êxito (violação EOAB arts. 34 e 39)
 - Citar algo ESPECÍFICO do caso — nunca genérico
@@ -575,7 +582,7 @@ function ToolLead({ onSaveCRM }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             {FORMATOS.map((f) => (
               <button key={f.id} onClick={() => setFmt(f.id)}
-                style={{ background: fmt === f.id ? `${T.gold}12` : T.card, border: `1px solid ${fmt === f.id ? T.gold : T.border}`, borderRadius: 9, padding: '10px 12px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}>
+                style={{ background: fmt === f.id ? `${T.gold}12` : T.card, border: `1px solid ${fmt === f.id ? T.gold : T.border}`, borderRadius: 9, padding: '10px 12px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s', gridColumn: f.id === 'parecer' ? '1/-1' : 'auto' }}>
                 <div style={{ fontSize: 16, marginBottom: 3 }}>{f.icon}</div>
                 <div style={{ color: fmt === f.id ? T.gold : T.text, fontSize: 12, fontWeight: 700 }}>{f.label}</div>
                 <div style={{ color: T.textMuted, fontSize: 10, marginTop: 2 }}>{f.desc}</div>
@@ -677,19 +684,21 @@ Fundamentos: ${(analysis.fundamentos||[]).slice(0,3).join('; ')}`;
   if (step === 3 && msgs) {
     const abObj = ABORDAGENS.find((a) => a.id === msgs.abId);
     const fmtObj = FORMATOS.find((f) => f.id === msgs.fmtId);
+    const isParecer = msgs.fmtId === 'parecer';
     return (
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
           <button onClick={() => setStep(2)} style={{ background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 7, padding: '6px 12px', color: T.textMuted, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>← Voltar</button>
-          <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 22, fontWeight: 700, margin: 0, color: T.text }}>Mensagem Pronta ✓</h2>
+          <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 22, fontWeight: 700, margin: 0, color: T.text }}>{isParecer ? '📝 Parecer Simplificado ✓' : 'Mensagem Pronta ✓'}</h2>
         </div>
         <p style={{ color: T.textMuted, fontSize: 13, marginBottom: 24, lineHeight: 1.5 }}>Copie e cole no canal escolhido.</p>
         {abObj && fmtObj && (
-          <InfoBox color={abObj.cor}>
-            {fmtObj.icon} <strong>{fmtObj.label}</strong> · tom {abObj.icon} <strong>{abObj.label}</strong> — {abObj.desc}
+          <InfoBox color={isParecer ? T.blue : abObj.cor}>
+            {fmtObj.icon} <strong>{fmtObj.label}</strong> · tom {abObj.icon} <strong>{abObj.label}</strong>
+            {isParecer && ' — linguagem simples para o cliente entender o próprio caso'}
           </InfoBox>
         )}
-        {[['MENSAGEM PRINCIPAL', 'mensagem_principal', T.gold], ['ACOMPANHAMENTO 24H', 'followup_24h', T.purple]].map(([lbl, key, cor]) => (
+        {[['MENSAGEM PRINCIPAL', 'mensagem_principal', isParecer ? T.blue : T.gold], ['ACOMPANHAMENTO 24H', 'followup_24h', T.purple]].map(([lbl, key, cor]) => (
           <Card key={key} accent={cor}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <Tag color={cor}>{lbl}</Tag>
@@ -1698,8 +1707,8 @@ export default function App() {
       <div style={{ borderBottom: `1px solid ${T.border}`, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 10, background: T.surface, position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ width: 32, height: 32, background: `linear-gradient(135deg,${T.gold},#7a5810)`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>⚖</div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: 'Georgia, serif', fontSize: 16, fontWeight: 700, lineHeight: 1.2 }}>LeadFechado</div>
-          <div style={{ fontSize: 9, color: T.textDim, fontFamily: 'monospace', letterSpacing: '0.1em' }}>SUÍTE JURÍDICA TRABALHISTA · PRODUTO FINAL</div>
+          <div style={{ fontFamily: 'Georgia, serif', fontSize: 16, fontWeight: 700, lineHeight: 1.2 }}>FECHA CONTRATO</div>
+          <div style={{ fontSize: 9, color: T.textDim, fontFamily: 'monospace', letterSpacing: '0.1em' }}>INTELIGÊNCIA JURÍDICA COMERCIAL · PRODUTO FINAL</div>
         </div>
       </div>
       <div style={{ background: T.surface, borderBottom: `1px solid ${T.border}`, display: 'flex', overflowX: 'auto', padding: '0 8px' }}>
