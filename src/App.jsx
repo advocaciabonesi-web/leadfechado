@@ -620,9 +620,7 @@ function ToolLead({ onSaveCRM }) {
                 <>
                   <Lbl>O que o cliente escreveu?</Lbl>
                   <textarea value={novaMsg} onChange={e => setNovaMsg(e.target.value)} rows={4}
-                    placeholder={'Cole aqui a mensagem, dúvida ou resposta do cliente...
-
-Ex: "Mas será que vale a pena mesmo? Tenho medo de perder meu emprego atual..."'}
+                    placeholder={'Cole aqui a mensagem, dúvida ou resposta do cliente...\n\nEx: "Mas será que vale a pena mesmo? Tenho medo de perder meu emprego atual..."'}
                     style={{ ...inp, resize: 'none', lineHeight: 1.7, fontSize: 13, marginBottom: 12, borderColor: `${T.gold}40` }} />
                   <Btn onClick={async () => {
                     if (!novaMsg.trim()) return;
