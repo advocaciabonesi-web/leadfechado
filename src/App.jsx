@@ -1290,7 +1290,22 @@ function ToolContrato() {
   const [contrato, setContrato] = useState('');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
+  const [modeloProprio, setModeloProprio] = useState('');
+  const [nomeModelo, setNomeModelo] = useState('');
   const up = (k, v) => setF((x) => ({ ...x, [k]: v }));
+
+  const handleModelo = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+        setModeloProprio(reader.result.slice(0, 6000)); setNomeModelo(file.name);
+      } else {
+        setNomeModelo(file.name + ' — use .txt para melhor resultado');
+      }
+    };
+    reader.readAsText(file);
+  };
 
   const gerar = async () => {
     if (!f.cliente || !f.caso) { setErr('Preencha nome do cliente e descrição do caso.'); return; }
@@ -1302,7 +1317,10 @@ CIDADE: ${f.cidade || '[Cidade]'}
 OBJETO/CASO: ${f.caso}
 HONORÁRIOS: ${f.tipo === 'exito' ? `${f.percentual || 30}% sobre o valor da condenação (êxito)` : f.tipo === 'fixo' ? `R$ ${f.honorarios} fixo` : f.tipo === 'misto' ? `R$ ${f.honorarios} entrada + ${f.percentual || 20}% êxito` : 'Honorários a combinar'}
 DATA: ${new Date().toLocaleDateString('pt-BR')}`;
-      const r = await callClaude(P_CONTRATO, ctx, 2000);
+      const promptBase = modeloProprio
+        ? `Use o MODELO DE CONTRATO abaixo como base estrutural e estilo, substituindo apenas as variáveis com os dados fornecidos. Mantenha a linguagem e cláusulas do modelo original. Respeite o EOAB e OAB Lei 8.906/94.\n\nMODELO DO ADVOGADO:\n${modeloProprio}\n\nRetorne SOMENTE JSON: {"contrato":"texto integral com \\n para quebras de linha"}`
+        : P_CONTRATO;
+      const r = await callClaude(promptBase, ctx, 2500);
       setContrato((r.contrato || '').replace(/\\n/g, '\n'));
     } catch (e) { setErr(e.message); } finally { setLoading(false); }
   };
@@ -1334,8 +1352,18 @@ DATA: ${new Date().toLocaleDateString('pt-BR')}`;
             </div>
             {f.tipo === 'misto' && <div><Lbl>Valor entrada (R$)</Lbl><input value={f.honorarios} onChange={(e) => up('honorarios', e.target.value)} placeholder="ex: 500" type="number" style={inp} /></div>}
           </div>
+          {/* MODELO PRÓPRIO */}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, background: nomeModelo ? T.greenBg : T.surface, border: `1px solid ${nomeModelo ? T.green : T.border}`, borderRadius: 9, padding: '11px 14px', cursor: 'pointer', marginBottom: 14, transition: 'all 0.2s' }}>
+            <input type="file" accept=".txt,.docx,.doc" onChange={handleModelo} style={{ display: 'none' }} />
+            <span style={{ fontSize: 16 }}>{nomeModelo ? '✓' : '📋'}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: nomeModelo ? T.green : T.text, fontSize: 12, fontWeight: 600 }}>{nomeModelo || 'Usar meu modelo de contrato (.txt ou .docx)'}</div>
+              <div style={{ color: T.textMuted, fontSize: 11, marginTop: 2 }}>{nomeModelo ? 'IA vai preencher seu modelo com os dados acima' : 'Opcional — sem envio usa o modelo padrão FECHA CONTRATO'}</div>
+            </div>
+            {nomeModelo && <button onClick={e => { e.preventDefault(); setModeloProprio(''); setNomeModelo(''); }} style={{ background: 'transparent', border: 'none', color: T.red, fontSize: 14, cursor: 'pointer' }}>✕</button>}
+          </label>
           <Err msg={err} />
-          <Btn onClick={gerar} disabled={loading} style={{ width: '100%', padding: 13 }}>{loading ? '⏳ Gerando contrato completo...' : '→ Gerar Contrato de Honorários'}</Btn>
+          <Btn onClick={gerar} disabled={loading} style={{ width: '100%', padding: 13 }}>{loading ? '⏳ Gerando contrato...' : nomeModelo ? '→ Gerar com Meu Modelo' : '→ Gerar Contrato de Honorários'}</Btn>
         </Card>
       ) : (
         <>
