@@ -725,7 +725,7 @@ Fundamentos: ${(analysis.fundamentos||[]).slice(0,3).join('; ')}`;
         {/* ✦ DOSSIÊ EXECUTIVO */}
         {!dossie ? (
           <div style={{ background: `${T.gold}10`, border: `1px solid ${T.goldBorder}`, borderRadius: 12, padding: '16px 18px', marginBottom: 8 }}>
-            <div style={{ fontSize: 11, color: T.gold, fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 6 }}>✦ MOLHO SECRETO — DOSSIÊ EXECUTIVO</div>
+            <div style={{ fontSize: 11, color: T.gold, fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 6 }}>✦ RESUMO DO CASO</div>
             <p style={{ color: T.textMuted, fontSize: 12, margin: '0 0 12px', lineHeight: 1.5 }}>Chega na consulta sabendo tudo: pontos fortes, riscos, valor estimado, script de abertura e a frase exata para fechar o contrato.</p>
             <Btn onClick={async () => {
               if (!analysis) return;
